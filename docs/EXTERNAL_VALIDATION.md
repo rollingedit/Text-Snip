@@ -26,6 +26,12 @@ For checks that require human confirmation after changing the environment, add t
 powershell -ExecutionPolicy Bypass -File tools\record-external-validation.ps1 -RunChecks -PostRebootHotkeyPassed -MultiMonitorCapturePassed
 ```
 
+For post-reboot hotkey validation, register the one-time logon task, reboot, sign in, and let the task update the evidence file:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\prepare-post-reboot-validation.ps1
+```
+
 ## Required Gates
 
 - `windows10x64`: Run the automated stack on Windows 10 x64.
