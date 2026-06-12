@@ -23,4 +23,4 @@ OCR Snip bundles or references the following third-party components.
 - Package: `Clipper2`
 - License: Boost Software License 1.0.
 
-See package and model source repositories for full license texts. Release packaging should include full license copies under `licenses/`.
+Full license copies are packaged under `licenses/` in published builds and installer sources.
