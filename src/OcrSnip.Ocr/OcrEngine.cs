@@ -33,7 +33,8 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
             : RecognizeScaled(source, Options.SmallTextBoost, cancellationToken);
 
         var ordered = OcrTextFormatter.SortLines(lines);
-        return Task.FromResult(new OcrResult(OcrTextFormatter.FormatLines(ordered, Options.CopyMode), ordered));
+        var diagnostics = OcrDiagnosticsAnalyzer.Analyze(source.Width, source.Height, ordered);
+        return Task.FromResult(new OcrResult(OcrTextFormatter.FormatLines(ordered, Options.CopyMode), ordered, diagnostics));
     }
 
     public void Unload()
@@ -233,7 +234,12 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
     }
 }
 
-public sealed record OcrResult(string Text, IReadOnlyList<OcrLine> Lines);
+public sealed record OcrResult(string Text, IReadOnlyList<OcrLine> Lines, OcrDiagnostics? Diagnostics = null);
+
+public sealed record OcrDiagnostics(bool HasEdgeTouchingText, bool HasLikelyEdgeFragment)
+{
+    public bool HasSelectionEdgeRisk => HasEdgeTouchingText || HasLikelyEdgeFragment;
+}
 
 public sealed record OcrLine(string Text, float Confidence, OcrQuadrilateral Bounds);
 

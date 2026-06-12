@@ -84,7 +84,7 @@ public sealed class SnipWorkflow
 
             if (_clipboard.TrySetText(result.Text, out _))
             {
-                ShowToast("Copied");
+                ShowToast(GetCopiedMessage(result));
                 return;
             }
 
@@ -125,6 +125,13 @@ public sealed class SnipWorkflow
         {
             _toast.ShowMessage(message);
         }
+    }
+
+    private static string GetCopiedMessage(OcrResult result)
+    {
+        return result.Diagnostics?.HasSelectionEdgeRisk == true
+            ? "Copied - check selection edges"
+            : "Copied";
     }
 
     private void ScheduleUnload()

@@ -23,6 +23,20 @@ public sealed class SnipWorkflowTests
     }
 
     [Fact]
+    public async Task StartSnipAsync_WarnsWhenCopiedTextHasSelectionEdgeRisk()
+    {
+        var diagnostics = new OcrDiagnostics(HasEdgeTouchingText: true, HasLikelyEdgeFragment: false);
+        var fakes = new Fakes { OcrResult = new OcrResult("hello", [], diagnostics) };
+        var workflow = CreateWorkflow(fakes);
+
+        await workflow.StartSnipAsync();
+
+        Assert.Equal("hello", fakes.CopiedText);
+        Assert.Contains("Copied - check selection edges", fakes.Toasts);
+        Assert.DoesNotContain("Copied", fakes.Toasts);
+    }
+
+    [Fact]
     public async Task StartSnipAsync_ShowsNoTextWhenOcrResultIsBlank()
     {
         var fakes = new Fakes { OcrResult = new OcrResult(" ", []) };

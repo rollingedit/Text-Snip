@@ -45,6 +45,7 @@ if (json)
         image = imagePath,
         elapsedMs = stopwatch.ElapsedMilliseconds,
         text = result.Text,
+        diagnostics = result.Diagnostics,
         lines = result.Lines.Select(line => new { line.Text, line.Confidence, line.Bounds })
     }, new JsonSerializerOptions { WriteIndented = true }));
 }

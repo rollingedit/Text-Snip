@@ -226,6 +226,7 @@ foreach ($image in Get-ChildItem $root -Filter "*.png" | Sort-Object Name) {
         spacingPhrases = $spacingPhraseResults
         spacingPass = $spacingPass
         shouldWarnEdge = $shouldWarnEdge
+        diagnostics = $actual.diagnostics
         lines = $actual.lines
         gateFailures = @($gateFailures | Where-Object image -eq $image.Name)
     }
