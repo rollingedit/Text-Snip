@@ -1,5 +1,6 @@
 param(
-    [string]$Configuration = "Release"
+    [string]$Configuration = "Release",
+    [switch]$IncludeDesktopHotkey
 )
 
 $ErrorActionPreference = "Stop"
@@ -44,6 +45,9 @@ Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "asset
 & (Join-Path $PSScriptRoot "verify-signing-status.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-app-selftests.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "collect-compatibility-report.ps1") | Out-Null
+if ($IncludeDesktopHotkey) {
+    & (Join-Path $PSScriptRoot "verify-hotkey-snip.ps1") | Out-Null
+}
 
 Assert-Exists (Join-Path $publishDir "OcrSnip.App.exe")
 Assert-Exists (Join-Path $publishDir "onnxruntime.dll")
