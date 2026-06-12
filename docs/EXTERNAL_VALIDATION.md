@@ -26,6 +26,12 @@ powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profil
 powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Status
 ```
 
+To merge evidence collected on another machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation.json
+```
+
 To run the full local stack and record any gates satisfied by the current machine:
 
 ```powershell
