@@ -1,7 +1,8 @@
 param(
     [string]$Configuration = "Release",
     [switch]$IncludeDesktopHotkey,
-    [switch]$IncludeHotkeyConflict
+    [switch]$IncludeHotkeyConflict,
+    [switch]$IncludeThemeModes
 )
 
 $ErrorActionPreference = "Stop"
@@ -52,6 +53,10 @@ if ($IncludeDesktopHotkey) {
 
 if ($IncludeHotkeyConflict) {
     & (Join-Path $PSScriptRoot "verify-hotkey-conflict.ps1") | Out-Null
+}
+
+if ($IncludeThemeModes) {
+    & (Join-Path $PSScriptRoot "verify-theme-modes.ps1") | Out-Null
 }
 
 Assert-Exists (Join-Path $publishDir "OcrSnip.App.exe")

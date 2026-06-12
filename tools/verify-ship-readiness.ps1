@@ -29,6 +29,7 @@ $requiredExternalGates = @(
 function Get-CurrentMachineEvidence {
     $compatibilityReport = Join-Path $repoRoot "artifacts/reports/compatibility-report.txt"
     $signingReport = Join-Path $repoRoot "artifacts/reports/signing-status.txt"
+    $themeReport = Join-Path $repoRoot "artifacts/reports/theme-validation.txt"
     $evidence = @{}
     if (!(Test-Path $compatibilityReport)) {
         return $evidence
@@ -41,6 +42,17 @@ function Get-CurrentMachineEvidence {
 
     if ($text -match "App light theme: 0" -and $text -match "System light theme: 0") {
         $evidence["darkTheme"] = "compatibility-report.txt shows dark app/system theme registry values"
+    }
+
+    if (Test-Path $themeReport) {
+        $themeText = Get-Content $themeReport -Raw
+        if ($themeText -match "light: passed") {
+            $evidence["lightTheme"] = "theme-validation.txt shows app, conflict, and hotkey snip checks passed in light mode"
+        }
+
+        if ($themeText -match "dark: passed") {
+            $evidence["darkTheme"] = "theme-validation.txt shows app, conflict, and hotkey snip checks passed in dark mode"
+        }
     }
 
     if ($text -match "CPU vendor/name: GenuineIntel" -and (Test-Path $signingReport)) {
@@ -70,7 +82,7 @@ if ($CreateTemplate -and !(Test-Path $evidenceFile)) {
 }
 
 if ($RunAutomatedChecks) {
-    & (Join-Path $PSScriptRoot "verify-release.ps1") -IncludeDesktopHotkey -IncludeHotkeyConflict
+    & (Join-Path $PSScriptRoot "verify-release.ps1") -IncludeDesktopHotkey -IncludeHotkeyConflict -IncludeThemeModes
     & (Join-Path $PSScriptRoot "run-ocr-fixtures.ps1")
     & (Join-Path $PSScriptRoot "compare-paddle-reference.ps1")
     & (Join-Path $PSScriptRoot "verify-privacy.ps1")

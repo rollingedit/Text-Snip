@@ -37,7 +37,7 @@ Each entry must set `passed` to `true` and include a short `evidence` note with 
 Run this on each validation machine/profile where possible:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File tools\verify-release.ps1 -IncludeDesktopHotkey -IncludeHotkeyConflict
+powershell -ExecutionPolicy Bypass -File tools\verify-release.ps1 -IncludeDesktopHotkey -IncludeHotkeyConflict -IncludeThemeModes
 powershell -ExecutionPolicy Bypass -File tools\run-ocr-fixtures.ps1
 powershell -ExecutionPolicy Bypass -File tools\compare-paddle-reference.ps1
 powershell -ExecutionPolicy Bypass -File tools\verify-privacy.ps1
