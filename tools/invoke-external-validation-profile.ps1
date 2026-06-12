@@ -13,7 +13,8 @@ param(
         "PostRebootPrepare",
         "PostRebootComplete",
         "Readiness",
-        "Status"
+        "Status",
+        "Export"
     )]
     [string]$Profile
 )
@@ -71,6 +72,10 @@ switch ($Profile) {
     }
     "Status" {
         & (Join-Path $PSScriptRoot "write-validation-status.ps1")
+        break
+    }
+    "Export" {
+        & (Join-Path $PSScriptRoot "export-external-validation.ps1")
         break
     }
 }
