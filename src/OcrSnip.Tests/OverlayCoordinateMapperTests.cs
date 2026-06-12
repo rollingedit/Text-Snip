@@ -34,4 +34,33 @@ public sealed class OverlayCoordinateMapperTests
         Assert.Equal(200, rect.Width);
         Assert.Equal(160, rect.Height);
     }
+
+    [Fact]
+    public void GetRegions_DimsOutsideSelectionOnly()
+    {
+        var regions = OverlayDimming.GetRegions(new Rect(0, 0, 100, 80), new Rect(20, 10, 50, 30));
+
+        Assert.Equal(
+            [
+                new Rect(0, 0, 100, 10),
+                new Rect(0, 40, 100, 40),
+                new Rect(0, 10, 20, 30),
+                new Rect(70, 10, 30, 30)
+            ],
+            regions);
+    }
+
+    [Fact]
+    public void GetRegions_ClipsSelectionToBounds()
+    {
+        var regions = OverlayDimming.GetRegions(new Rect(0, 0, 100, 80), new Rect(-10, 20, 40, 30));
+
+        Assert.Equal(
+            [
+                new Rect(0, 0, 100, 20),
+                new Rect(0, 50, 100, 30),
+                new Rect(30, 20, 70, 30)
+            ],
+            regions);
+    }
 }

@@ -91,19 +91,52 @@ public sealed class OverlayWindow : Window
 
 sealed class SelectionCanvas : FrameworkElement
 {
+    private static readonly System.Windows.Media.Brush DimmingBrush = new SolidColorBrush(System.Windows.Media.Color.FromArgb(125, 0, 0, 0));
+    private static readonly System.Windows.Media.Pen SelectionBorder = new(System.Windows.Media.Brushes.White, 2);
+
     public Rect? Selection { get; set; }
 
     protected override void OnRender(DrawingContext dc)
     {
         var bounds = new Rect(0, 0, ActualWidth, ActualHeight);
-        dc.DrawRectangle(new SolidColorBrush(System.Windows.Media.Color.FromArgb(110, 0, 0, 0)), null, bounds);
-
-        if (Selection is not { } selection)
+        if (Selection is not { } selection || selection.Width <= 0 || selection.Height <= 0)
         {
+            dc.DrawRectangle(DimmingBrush, null, bounds);
             return;
         }
 
-        dc.DrawRectangle(new SolidColorBrush(System.Windows.Media.Color.FromArgb(80, 255, 255, 255)), null, selection);
-        dc.DrawRectangle(null, new System.Windows.Media.Pen(System.Windows.Media.Brushes.White, 2), selection);
+        foreach (var region in OverlayDimming.GetRegions(bounds, selection))
+        {
+            dc.DrawRectangle(DimmingBrush, null, region);
+        }
+
+        dc.DrawRectangle(null, SelectionBorder, selection);
+    }
+}
+
+public static class OverlayDimming
+{
+    public static IReadOnlyList<Rect> GetRegions(Rect bounds, Rect selection)
+    {
+        selection.Intersect(bounds);
+        if (selection.IsEmpty)
+        {
+            return [bounds];
+        }
+
+        var regions = new List<Rect>(4);
+        AddRegion(regions, new Rect(bounds.Left, bounds.Top, bounds.Width, selection.Top - bounds.Top));
+        AddRegion(regions, new Rect(bounds.Left, selection.Bottom, bounds.Width, bounds.Bottom - selection.Bottom));
+        AddRegion(regions, new Rect(bounds.Left, selection.Top, selection.Left - bounds.Left, selection.Height));
+        AddRegion(regions, new Rect(selection.Right, selection.Top, bounds.Right - selection.Right, selection.Height));
+        return regions;
+    }
+
+    private static void AddRegion(List<Rect> regions, Rect region)
+    {
+        if (region.Width > 0 && region.Height > 0)
+        {
+            regions.Add(region);
+        }
     }
 }
