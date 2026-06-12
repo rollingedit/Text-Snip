@@ -30,4 +30,21 @@ public static class StartupRegistration
 
         key.SetValue(ValueName, $"\"{exe}\" --tray");
     }
+
+    public static bool IsRegistered(string? expectedExePath)
+    {
+        using var key = Registry.CurrentUser.OpenSubKey(RunKeyPath, writable: false);
+        var value = key?.GetValue(ValueName) as string;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(expectedExePath))
+        {
+            return true;
+        }
+
+        return value.Contains(expectedExePath, StringComparison.OrdinalIgnoreCase);
+    }
 }
