@@ -124,6 +124,20 @@ try {
         throw "Import target did not include the expected passed gate."
     }
 
+    $zipSourceRoot = Join-ScratchAbsolute "zip-source"
+    New-Item -ItemType Directory -Force -Path $zipSourceRoot | Out-Null
+    Copy-Item -LiteralPath $importSource -Destination (Join-Path $zipSourceRoot "external-validation.json")
+    "validation tooling zip import status" | Set-Content (Join-Path $zipSourceRoot "validation-status.md")
+    $zipSource = Join-ScratchAbsolute "external-validation-export.zip"
+    Compress-Archive -Path (Join-Path $zipSourceRoot "*") -DestinationPath $zipSource -Force
+    $zipImportTarget = Join-ScratchAbsolute "zip-import-target.json"
+    Remove-Item $zipImportTarget -Force -ErrorAction SilentlyContinue
+    & (Join-Path $PSScriptRoot "import-external-validation.ps1") -SourcePath $zipSource -EvidencePath (Join-Scratch "zip-import-target.json")
+    $zipImported = Get-Content $zipImportTarget -Raw | ConvertFrom-Json
+    if ($zipImported.($gates[0]).passed -ne $true) {
+        throw "ZIP import target did not include the expected passed gate."
+    }
+
     $statusPath = Join-ScratchAbsolute "status.md"
     & (Join-Path $PSScriptRoot "write-validation-status.ps1") -EvidencePath (Join-Scratch "complete.json") -OutputPath (Join-Scratch "status.md")
     if (!(Test-Path $statusPath) -or (Get-Content $statusPath -Raw) -notmatch "\| $($gates[0]) \| PASS \|") {

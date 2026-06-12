@@ -38,6 +38,12 @@ To merge evidence collected on another machine:
 powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation.json
 ```
 
+The importer also accepts the ZIP produced by the `Export` profile or uploaded by the `External Validation` GitHub Actions workflow:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation-export.zip
+```
+
 To create a small transfer ZIP containing only external validation evidence and status:
 
 ```powershell

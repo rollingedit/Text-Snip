@@ -8,8 +8,25 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $source = Resolve-Path $SourcePath
 $destination = Join-Path $repoRoot $EvidencePath
+$extractRoot = Join-Path $repoRoot "artifacts/reports/import-external-validation"
 
 $knownGates = @((Get-Content (Join-Path $PSScriptRoot "validation-gates.json") -Raw | ConvertFrom-Json).id)
+
+function Resolve-EvidenceSource([string]$Path) {
+    if ([System.IO.Path]::GetExtension($Path).Equals(".zip", [StringComparison]::OrdinalIgnoreCase)) {
+        Remove-Item -Recurse -Force $extractRoot -ErrorAction SilentlyContinue
+        New-Item -ItemType Directory -Force -Path $extractRoot | Out-Null
+        Expand-Archive -LiteralPath $Path -DestinationPath $extractRoot -Force
+        $json = Get-ChildItem -LiteralPath $extractRoot -Filter "external-validation.json" -File -Recurse | Select-Object -First 2
+        if (@($json).Count -ne 1) {
+            throw "Validation export ZIP must contain exactly one external-validation.json file."
+        }
+
+        return $json[0].FullName
+    }
+
+    return $Path
+}
 
 function New-BlankEvidence {
     $data = [ordered]@{}
@@ -66,23 +83,29 @@ else {
     $merged = New-BlankEvidence
 }
 
-$incoming = Get-Content $source -Raw | ConvertFrom-Json
-$imported = @()
-foreach ($property in $incoming.PSObject.Properties) {
-    if (Assert-ValidEntry $property.Name $property.Value) {
-        $merged[$property.Name] = [ordered]@{
-            passed = $true
-            evidence = [string]$property.Value.evidence
-            verifiedAt = [string]$property.Value.verifiedAt
+try {
+    $evidenceSource = Resolve-EvidenceSource $source
+    $incoming = Get-Content $evidenceSource -Raw | ConvertFrom-Json
+    $imported = @()
+    foreach ($property in $incoming.PSObject.Properties) {
+        if (Assert-ValidEntry $property.Name $property.Value) {
+            $merged[$property.Name] = [ordered]@{
+                passed = $true
+                evidence = [string]$property.Value.evidence
+                verifiedAt = [string]$property.Value.verifiedAt
+            }
+            $imported += $property.Name
         }
-        $imported += $property.Name
     }
-}
 
-if ($imported.Count -eq 0) {
-    throw "No passed validation gates were imported from $source"
-}
+    if ($imported.Count -eq 0) {
+        throw "No passed validation gates were imported from $source"
+    }
 
-New-Item -ItemType Directory -Force -Path (Split-Path $destination -Parent) | Out-Null
-$merged | ConvertTo-Json -Depth 4 | Set-Content $destination
-Write-Host "Imported validation gates: $($imported -join ', ')"
+    New-Item -ItemType Directory -Force -Path (Split-Path $destination -Parent) | Out-Null
+    $merged | ConvertTo-Json -Depth 4 | Set-Content $destination
+    Write-Host "Imported validation gates: $($imported -join ', ')"
+}
+finally {
+    Remove-Item -Recurse -Force $extractRoot -ErrorAction SilentlyContinue
+}
