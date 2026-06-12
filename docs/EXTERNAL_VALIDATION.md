@@ -40,6 +40,12 @@ powershell -ExecutionPolicy Bypass -File tools\validate-display-environment.ps1 
 powershell -ExecutionPolicy Bypass -File tools\validate-display-environment.ps1 -ExpectedDpiScale 100 -RequireMixedDpi -RequireNegativeVirtualMonitor -MultiMonitorCapturePassed
 ```
 
+To test capture on every currently connected monitor without recording multi-monitor evidence:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\verify-monitor-capture.ps1
+```
+
 For admin-account validation, run this from an elevated PowerShell session:
 
 ```powershell

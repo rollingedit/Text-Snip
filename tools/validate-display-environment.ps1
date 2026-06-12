@@ -32,6 +32,6 @@ if ($MultiMonitorCapturePassed) {
     }
 }
 
-& (Join-Path $PSScriptRoot "verify-hotkey-snip.ps1") | Out-Null
+& (Join-Path $PSScriptRoot "verify-monitor-capture.ps1") -RequireMultipleMonitors:$MultiMonitorCapturePassed | Out-Null
 & (Join-Path $PSScriptRoot "record-external-validation.ps1") -MultiMonitorCapturePassed:$MultiMonitorCapturePassed | Out-Null
 Write-Host "Display environment validation passed."
