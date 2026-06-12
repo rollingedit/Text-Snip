@@ -30,6 +30,7 @@ public partial class App : System.Windows.Application
 
         var settingsStore = new SettingsStore();
         var settings = settingsStore.Load();
+        StartupRegistration.Apply(settings.LaunchAtLogin);
         _ocrEngine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
         _workflow = new SnipWorkflow(settingsStore, settings, _ocrEngine);
         _hotkeyService = new HotkeyService(settings.Hotkey, () => _ = _workflow.StartSnipAsync());

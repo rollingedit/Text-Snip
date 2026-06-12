@@ -11,6 +11,7 @@ namespace OcrSnip.App;
 public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine)
 {
     private readonly SemaphoreSlim _gate = new(1, 1);
+    private readonly System.Threading.Timer _unloadTimer = new(_ => ocrEngine.Unload());
 
     public async Task StartSnipAsync()
     {
@@ -27,32 +28,33 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
                 return;
             }
 
-            ToastWindow.ShowMessage("Reading...");
+            ShowToast("Reading...");
             var bitmap = await ScreenCapture.CaptureAsync(selection.Value).ConfigureAwait(true);
             var result = await ocrEngine.RecognizeAsync(bitmap, CancellationToken.None).ConfigureAwait(true);
+            ScheduleUnload();
             if (string.IsNullOrWhiteSpace(result.Text))
             {
-                ToastWindow.ShowMessage("No text found");
+                ShowToast("No text found");
                 return;
             }
 
             if (ClipboardService.TrySetText(result.Text, out _))
             {
-                ToastWindow.ShowMessage("Copied");
+                ShowToast("Copied");
                 return;
             }
 
-            ToastWindow.ShowMessage("Clipboard busy - text opened");
+            ShowToast("Clipboard busy - text opened");
             ResultWindow.ShowResult(result.Text);
         }
         catch (ModelUnavailableException ex)
         {
-            ToastWindow.ShowMessage(ex.Message);
+            ShowToast(ex.Message);
         }
         catch (Exception)
         {
             ocrEngine.Unload();
-            ToastWindow.ShowMessage("OCR failed");
+            ShowToast("OCR failed");
         }
         finally
         {
@@ -69,7 +71,27 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
 
     public void ShowHotkeyConflict()
     {
-        ToastWindow.ShowMessage("Hotkey already in use");
+        ShowToast("Hotkey already in use");
         ShowSettings();
+    }
+
+    private void ShowToast(string message)
+    {
+        if (settings.ToastEnabled)
+        {
+            ToastWindow.ShowMessage(message);
+        }
+    }
+
+    private void ScheduleUnload()
+    {
+        var dueTime = settings.MemoryMode switch
+        {
+            MemoryMode.LowMemory => TimeSpan.FromSeconds(60),
+            MemoryMode.Balanced => TimeSpan.FromMinutes(10),
+            MemoryMode.Performance => Timeout.InfiniteTimeSpan,
+            _ => TimeSpan.FromMinutes(10)
+        };
+        _unloadTimer.Change(dueTime, Timeout.InfiniteTimeSpan);
     }
 }

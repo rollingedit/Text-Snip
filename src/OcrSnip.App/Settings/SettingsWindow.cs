@@ -9,7 +9,7 @@ public sealed class SettingsWindow : Window
     {
         Title = "OCR Snip Settings";
         Width = 360;
-        Height = 240;
+        Height = 290;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
@@ -23,13 +23,17 @@ public sealed class SettingsWindow : Window
         panel.Children.Add(boost);
         var toast = new System.Windows.Controls.CheckBox { Content = "Show toast", IsChecked = settings.ToastEnabled, Margin = new Thickness(0, 0, 0, 12) };
         panel.Children.Add(toast);
+        var launchAtLogin = new System.Windows.Controls.CheckBox { Content = "Launch at login", IsChecked = settings.LaunchAtLogin, Margin = new Thickness(0, 0, 0, 12) };
+        panel.Children.Add(launchAtLogin);
         var save = new System.Windows.Controls.Button { Content = "Save", Height = 32, HorizontalAlignment = System.Windows.HorizontalAlignment.Right, MinWidth = 96 };
         save.Click += (_, _) =>
         {
             settings.MemoryMode = (MemoryMode)memory.SelectedItem;
             settings.SmallTextBoost = (SmallTextBoost)boost.SelectedItem;
             settings.ToastEnabled = toast.IsChecked == true;
+            settings.LaunchAtLogin = launchAtLogin.IsChecked == true;
             store.Save(settings);
+            StartupRegistration.Apply(settings.LaunchAtLogin);
             Close();
         };
         panel.Children.Add(save);
