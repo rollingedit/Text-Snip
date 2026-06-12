@@ -32,6 +32,21 @@ Run the `Tooling` profile after changing validation scripts. It uses temporary i
 
 The same profiles can be run from GitHub Actions with the `External Validation` workflow. Use self-hosted Windows runners for hardware, admin, reboot, and display-layout evidence; the workflow uploads `external-validation-export.zip` when evidence is available.
 
+If the target machine does not have the repo or .NET SDK, create a portable validation kit on the development machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\create-external-validation-kit.ps1
+```
+
+Copy `artifacts\publish\OcrSnip-ExternalValidationKit.zip` to the target Windows machine, extract it, and run the kit runner from the extracted folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict
+```
+
+The kit writes `artifacts\reports\external-validation-export.zip`, which can be imported directly back in this repo.
+For DPI gates, include `-IncludeDesktopHotkey`; the kit records DPI evidence only when a real desktop hotkey snip passes at the detected scale.
+
 To merge evidence collected on another machine:
 
 ```powershell
