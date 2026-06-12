@@ -3,6 +3,7 @@
     <Project Path="src/OcrSnip.App/OcrSnip.App.csproj" />
     <Project Path="src/OcrSnip.Ocr/OcrSnip.Ocr.csproj" />
     <Project Path="src/OcrSnip.Tests/OcrSnip.Tests.csproj" />
+    <Project Path="src/OcrSnip.Tools.OcrCli/OcrSnip.Tools.OcrCli.csproj" />
     <Project Path="src/OcrSnip.Tools.OnnxInspect/OcrSnip.Tools.OnnxInspect.csproj" />
   </Folder>
 </Solution>
