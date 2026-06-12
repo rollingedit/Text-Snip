@@ -14,6 +14,18 @@ powershell -ExecutionPolicy Bypass -File tools\verify-ship-readiness.ps1 -Create
 
 Each entry must set `passed` to `true` and include a short `evidence` note with the machine/run used. Keep the generated JSON out of commits.
 
+The profile runner is the preferred entry point for validation machines:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile CurrentMachineFull
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Windows10Amd
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Dpi125
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Dpi150
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile MixedNegativeMultiMonitor
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Admin
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Status
+```
+
 To run the full local stack and record any gates satisfied by the current machine:
 
 ```powershell
