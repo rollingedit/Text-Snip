@@ -27,6 +27,8 @@ powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profil
 powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Export
 ```
 
+The same profiles can be run from GitHub Actions with the `External Validation` workflow. Use self-hosted Windows runners for hardware, admin, reboot, and display-layout evidence; the workflow uploads `external-validation-export.zip` when evidence is available.
+
 To merge evidence collected on another machine:
 
 ```powershell

@@ -1,0 +1,66 @@
+name: External Validation
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: Validation profile to run
+        required: true
+        default: CurrentMachineFull
+        type: choice
+        options:
+          - CurrentMachineFull
+          - Windows10
+          - Windows10Amd
+          - AmdCpu
+          - Admin
+          - Dpi100
+          - Dpi125
+          - Dpi150
+          - MixedNegativeMultiMonitor
+          - PostRebootComplete
+          - Readiness
+          - Status
+          - Export
+      runner_labels:
+        description: JSON array of runner labels
+        required: true
+        default: '["self-hosted","Windows","X64"]'
+        type: string
+
+jobs:
+  validate:
+    runs-on: ${{ fromJson(inputs.runner_labels) }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.301
+
+      - name: Run validation profile
+        shell: pwsh
+        env:
+          VALIDATION_PROFILE: ${{ inputs.profile }}
+        run: ./tools/invoke-external-validation-profile.ps1 -Profile $env:VALIDATION_PROFILE
+
+      - name: Export validation evidence
+        if: always()
+        shell: pwsh
+        run: |
+          try {
+            ./tools/invoke-external-validation-profile.ps1 -Profile Export
+          }
+          catch {
+            Write-Host "Validation export was not available: $($_.Exception.Message)"
+          }
+
+      - name: Upload validation evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-validation-${{ inputs.profile }}
+          path: artifacts/reports/external-validation-export.zip
+          if-no-files-found: warn
