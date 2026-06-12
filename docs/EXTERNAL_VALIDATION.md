@@ -46,6 +46,13 @@ For admin-account validation, run this from an elevated PowerShell session:
 powershell -ExecutionPolicy Bypass -File tools\validate-admin-environment.ps1 -RunChecks
 ```
 
+For OS and CPU matrix validation, assert the expected machine profile before recording evidence:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validate-machine-environment.ps1 -ExpectedWindows Windows10 -ExpectedCpuVendor AMD -RunChecks
+powershell -ExecutionPolicy Bypass -File tools\validate-machine-environment.ps1 -ExpectedWindows Windows11 -ExpectedCpuVendor Intel -RunChecks
+```
+
 ## Required Gates
 
 - `windows10x64`: Run the automated stack on Windows 10 x64.
