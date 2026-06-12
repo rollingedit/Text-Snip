@@ -16,6 +16,7 @@ public sealed class ModelConfigTests
         Assert.Contains("A", characters);
         Assert.Contains("_", characters);
         Assert.Contains("/", characters);
+        Assert.Equal(" ", characters[^1]);
     }
 
     private static string FindRepoRoot()

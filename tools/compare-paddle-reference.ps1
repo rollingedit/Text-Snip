@@ -20,6 +20,7 @@ if (!(Test-Path $referenceRoot)) {
 
 $fixtureResults = Get-Content $fixtureResultsFile -Raw | ConvertFrom-Json
 $comparisons = @()
+$gateFailures = @()
 foreach ($fixture in $fixtureResults) {
     $baseName = [System.IO.Path]::GetFileNameWithoutExtension($fixture.image)
     $referencePath = Join-Path $referenceRoot "$baseName.json"
@@ -31,15 +32,20 @@ foreach ($fixture in $fixtureResults) {
     $paddleText = ($reference[0].rec_texts -join [Environment]::NewLine).Trim()
     $csharpText = ($fixture.actual).Trim()
     $matches = $paddleText -eq $csharpText
+    $fixtureGateFailures = @($fixture.gateFailures)
+    if ($fixtureGateFailures.Count -gt 0) {
+        $gateFailures += $fixtureGateFailures
+    }
+
     $comparisons += [pscustomobject]@{
         image = $fixture.image
+        category = $fixture.category
+        risk = $fixture.risk
         csharp = $csharpText
         paddle = $paddleText
         matches = $matches
-    }
-
-    if (!$matches) {
-        throw "Paddle parity mismatch for $($fixture.image): C#='$csharpText' Paddle='$paddleText'"
+        primaryPass = $fixture.primaryPass
+        spacingPass = $fixture.spacingPass
     }
 }
 
@@ -48,3 +54,12 @@ $comparisons | ConvertTo-Json -Depth 4 | Set-Content $output
 $matched = @($comparisons | Where-Object matches).Count
 $total = @($comparisons).Count
 Write-Host "Paddle parity comparison written to $output ($matched/$total exact matches)"
+$comparisons | Group-Object category | Sort-Object Name | ForEach-Object {
+    $group = @($_.Group)
+    $exact = @($group | Where-Object matches).Count
+    Write-Host "  $($_.Name): $exact/$($group.Count) exact matches"
+}
+
+if ($gateFailures.Count -gt 0) {
+    throw "$($gateFailures.Count) fixture gate failure(s) present; run tools\run-ocr-fixtures.ps1 for details."
+}

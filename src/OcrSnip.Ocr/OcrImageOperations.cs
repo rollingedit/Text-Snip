@@ -31,7 +31,7 @@ public static class OcrImageOperations
     public static DenseTensor<float> CreateRecognizerTensor(Mat bgr)
     {
         const int targetHeight = 48;
-        const int targetWidth = 320;
+        var targetWidth = GetRecognizerTargetWidth(bgr.Width, bgr.Height);
         var ratio = Math.Min(targetWidth / (double)bgr.Width, targetHeight / (double)bgr.Height);
         var resizedWidth = Math.Clamp((int)Math.Round(bgr.Width * ratio), 1, targetWidth);
         using var resized = new Mat();
@@ -53,6 +53,23 @@ public static class OcrImageOperations
         }
 
         return tensor;
+    }
+
+    public static int GetRecognizerTargetWidth(int width, int height)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(width);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(height);
+
+        const int targetHeight = 48;
+        const int minWidth = 160;
+        const int maxWidth = 3200;
+        var aspectWidth = (int)Math.Ceiling(targetHeight * (width / (double)height));
+        return Math.Clamp(RoundUpToMultiple(aspectWidth, 8), minWidth, maxWidth);
+    }
+
+    private static int RoundUpToMultiple(int value, int multiple)
+    {
+        return Math.Max(multiple, (int)Math.Ceiling(value / (double)multiple) * multiple);
     }
 
     public static Mat BitmapSourceToBgrMat(System.Windows.Media.Imaging.BitmapSource source)

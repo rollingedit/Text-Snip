@@ -22,7 +22,25 @@ public sealed class OcrImageOperationsTests
 
         var tensor = OcrImageOperations.CreateRecognizerTensor(image);
 
-        Assert.Equal([1, 3, 48, 320], tensor.Dimensions.ToArray());
+        Assert.Equal([1, 3, 48, 160], tensor.Dimensions.ToArray());
+    }
+
+    [Fact]
+    public void CreateRecognizerTensor_PreservesWideLineAspectRatio()
+    {
+        using var image = new Mat(25, 650, MatType.CV_8UC3, new Scalar(255, 255, 255));
+
+        var tensor = OcrImageOperations.CreateRecognizerTensor(image);
+
+        Assert.Equal([1, 3, 48, 1248], tensor.Dimensions.ToArray());
+    }
+
+    [Fact]
+    public void GetRecognizerTargetWidth_ClampsToModelDynamicWidthLimit()
+    {
+        var width = OcrImageOperations.GetRecognizerTargetWidth(4000, 20);
+
+        Assert.Equal(3200, width);
     }
 
     [Fact]

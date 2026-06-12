@@ -21,6 +21,24 @@ public sealed class CtcDecoderTests
         Assert.Equal((0.9f + 0.6f + 0.5f) / 3f, decoded.Confidence, precision: 5);
     }
 
+    [Fact]
+    public void Decode_PreservesSpaceClassBetweenWords()
+    {
+        var tensor = new DenseTensor<float>([1, 7, 4]);
+        SetBest(tensor, 0, 1, 0.9f);
+        SetBest(tensor, 1, 0, 0.7f);
+        SetBest(tensor, 2, 3, 0.95f);
+        SetBest(tensor, 3, 0, 0.7f);
+        SetBest(tensor, 4, 2, 0.91f);
+        SetBest(tensor, 5, 2, 0.88f);
+        SetBest(tensor, 6, 0, 0.7f);
+
+        var decoded = CtcDecoder.Decode(tensor, ["A", "B", " "]);
+
+        Assert.Equal("A B", decoded.Text);
+        Assert.Equal((0.9f + 0.95f + 0.91f) / 3f, decoded.Confidence, precision: 5);
+    }
+
     private static void SetBest(DenseTensor<float> tensor, int timeStep, int classIndex, float value)
     {
         for (var i = 0; i < tensor.Dimensions[2]; i++)
