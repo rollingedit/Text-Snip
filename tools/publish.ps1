@@ -15,6 +15,9 @@ $publishDir = Join-Path $repoRoot $OutputPath
     --self-contained true `
     /p:PublishSingleFile=false `
     -o $publishDir
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet publish failed with exit code $LASTEXITCODE"
+}
 
 $zipPath = Join-Path $repoRoot "artifacts/publish/OcrSnip-Portable-x64.zip"
 if (Test-Path $zipPath) {

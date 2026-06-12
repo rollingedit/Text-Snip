@@ -50,7 +50,7 @@ public sealed class OverlayWindow : Window
                 return;
             }
 
-            _selection = Normalize(_start.Value, e.GetPosition(this));
+            _selection = OverlayCoordinateMapper.Normalize(_start.Value, e.GetPosition(this));
             _canvas.Selection = _selection;
             _canvas.InvalidateVisual();
         };
@@ -62,7 +62,7 @@ public sealed class OverlayWindow : Window
             }
 
             ReleaseMouseCapture();
-            _selection = Normalize(_start.Value, e.GetPosition(this));
+            _selection = OverlayCoordinateMapper.Normalize(_start.Value, e.GetPosition(this));
             DialogResult = _selection.Value.Width >= 4 && _selection.Value.Height >= 4;
             Close();
         };
@@ -80,20 +80,7 @@ public sealed class OverlayWindow : Window
         var rect = window._selection.Value;
         var scaleX = Forms.Screen.PrimaryScreen?.Bounds.Width / SystemParameters.PrimaryScreenWidth ?? 1.0;
         var scaleY = Forms.Screen.PrimaryScreen?.Bounds.Height / SystemParameters.PrimaryScreenHeight ?? 1.0;
-        return new Int32Rect(
-            (int)Math.Round((window.Left + rect.X) * scaleX),
-            (int)Math.Round((window.Top + rect.Y) * scaleY),
-            Math.Max(1, (int)Math.Round(rect.Width * scaleX)),
-            Math.Max(1, (int)Math.Round(rect.Height * scaleY)));
-    }
-
-    private static Rect Normalize(WpfPoint a, WpfPoint b)
-    {
-        return new Rect(
-            Math.Min(a.X, b.X),
-            Math.Min(a.Y, b.Y),
-            Math.Abs(a.X - b.X),
-            Math.Abs(a.Y - b.Y));
+        return OverlayCoordinateMapper.ToPhysicalRect(rect, window.Left, window.Top, scaleX, scaleY);
     }
 }
 

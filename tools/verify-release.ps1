@@ -27,11 +27,18 @@ function Assert-ZipEntry([string]$Zip, [string]$Entry) {
     }
 }
 
-& $dotnet build (Join-Path $repoRoot "OcrSnip.slnx") -c $Configuration
-& $dotnet test (Join-Path $repoRoot "OcrSnip.slnx") -c $Configuration --no-build
+function Invoke-Native([scriptblock]$Command) {
+    & $Command
+    if ($LASTEXITCODE -ne 0) {
+        throw "Native command failed with exit code $LASTEXITCODE"
+    }
+}
+
+Invoke-Native { & $dotnet build (Join-Path $repoRoot "OcrSnip.slnx") -c $Configuration }
+Invoke-Native { & $dotnet test (Join-Path $repoRoot "OcrSnip.slnx") -c $Configuration --no-build }
 & (Join-Path $PSScriptRoot "verify-models.ps1")
-& (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-det/inference.onnx" | Out-Null
-& (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-rec/inference.onnx" | Out-Null
+Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-det/inference.onnx" | Out-Null }
+Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-rec/inference.onnx" | Out-Null }
 & (Join-Path $PSScriptRoot "publish.ps1") -Configuration $Configuration
 
 Assert-Exists (Join-Path $publishDir "OcrSnip.App.exe")

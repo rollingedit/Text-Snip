@@ -8,6 +8,50 @@ public sealed record HotkeyDefinition(
 {
     public static HotkeyDefinition Default { get; } = new(HotkeyModifiers.Control | HotkeyModifiers.Shift, 'O');
 
+    public static bool TryParse(string text, out HotkeyDefinition hotkey)
+    {
+        hotkey = Default;
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        var modifiers = HotkeyModifiers.None;
+        int? key = null;
+        foreach (var rawPart in text.Split('+', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (rawPart.Equals("Ctrl", StringComparison.OrdinalIgnoreCase) ||
+                rawPart.Equals("Control", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= HotkeyModifiers.Control;
+            }
+            else if (rawPart.Equals("Shift", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= HotkeyModifiers.Shift;
+            }
+            else if (rawPart.Equals("Alt", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= HotkeyModifiers.Alt;
+            }
+            else if (rawPart.Length == 1 && char.IsLetterOrDigit(rawPart[0]))
+            {
+                key = char.ToUpperInvariant(rawPart[0]);
+            }
+            else
+            {
+                return false;
+            }
+        }
+
+        if (modifiers == HotkeyModifiers.None || key is null)
+        {
+            return false;
+        }
+
+        hotkey = new HotkeyDefinition(modifiers, key.Value);
+        return true;
+    }
+
     public override string ToString()
     {
         var parts = new List<string>();
