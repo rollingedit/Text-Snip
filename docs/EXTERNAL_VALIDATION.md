@@ -25,7 +25,10 @@ powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profil
 powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Admin
 powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Status
 powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Export
+powershell -ExecutionPolicy Bypass -File tools\invoke-external-validation-profile.ps1 -Profile Tooling
 ```
+
+Run the `Tooling` profile after changing validation scripts. It uses temporary ignored evidence files and verifies parser checks, manifest integrity, readiness validation, import rejection, import success, and status generation.
 
 The same profiles can be run from GitHub Actions with the `External Validation` workflow. Use self-hosted Windows runners for hardware, admin, reboot, and display-layout evidence; the workflow uploads `external-validation-export.zip` when evidence is available.
 
