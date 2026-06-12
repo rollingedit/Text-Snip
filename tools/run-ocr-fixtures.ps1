@@ -8,6 +8,9 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $root = Join-Path $repoRoot $FixtureRoot
 $output = Join-Path $repoRoot $OutputPath
 $dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
+if (!(Test-Path $dotnet)) {
+    $dotnet = "dotnet"
+}
 
 function Invoke-Native([scriptblock]$Command) {
     & $Command

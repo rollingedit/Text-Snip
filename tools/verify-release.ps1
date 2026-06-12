@@ -40,6 +40,7 @@ function Invoke-Native([scriptblock]$Command) {
 Invoke-Native { & $dotnet build (Join-Path $repoRoot "OcrSnip.slnx") -c $Configuration }
 Invoke-Native { & $dotnet test (Join-Path $repoRoot "OcrSnip.slnx") -c $Configuration --no-build }
 & (Join-Path $PSScriptRoot "verify-models.ps1")
+& (Join-Path $PSScriptRoot "run-ocr-fixtures.ps1") | Out-Null
 Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-det/inference.onnx" | Out-Null }
 Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-rec/inference.onnx" | Out-Null }
 & (Join-Path $PSScriptRoot "publish.ps1") -Configuration $Configuration
