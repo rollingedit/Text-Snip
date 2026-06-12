@@ -32,6 +32,10 @@ jobs:
       - name: Test
         run: dotnet test OcrSnip.slnx -c Release --no-build
 
+      - name: Verify validation tooling
+        shell: pwsh
+        run: ./tools/verify-validation-tooling.ps1
+
       - name: Publish
         shell: pwsh
         run: ./tools/publish.ps1
