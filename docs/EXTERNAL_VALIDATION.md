@@ -14,6 +14,18 @@ powershell -ExecutionPolicy Bypass -File tools\verify-ship-readiness.ps1 -Create
 
 Each entry must set `passed` to `true` and include a short `evidence` note with the machine/run used. Keep the generated JSON out of commits.
 
+To run the full local stack and record any gates satisfied by the current machine:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\record-external-validation.ps1 -RunChecks
+```
+
+For checks that require human confirmation after changing the environment, add the relevant flag:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\record-external-validation.ps1 -RunChecks -PostRebootHotkeyPassed -MultiMonitorCapturePassed
+```
+
 ## Required Gates
 
 - `windows10x64`: Run the automated stack on Windows 10 x64.
