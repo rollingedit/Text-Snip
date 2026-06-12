@@ -8,23 +8,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $evidenceFile = Join-Path $repoRoot $EvidencePath
 
-$requiredExternalGates = @(
-    "windows10x64",
-    "amdCpu",
-    "dpi100",
-    "dpi125",
-    "dpi150",
-    "mixedDpi",
-    "negativeVirtualMonitor",
-    "lightTheme",
-    "darkTheme",
-    "standardAccount",
-    "adminAccount",
-    "postRebootHotkey",
-    "multiMonitorCapture",
-    "intelModelLoad",
-    "amdModelLoad"
-)
+$requiredExternalGates = @((Get-Content (Join-Path $PSScriptRoot "validation-gates.json") -Raw | ConvertFrom-Json).id)
 
 function Assert-ValidEvidenceFile($Evidence) {
     foreach ($property in $Evidence.PSObject.Properties) {

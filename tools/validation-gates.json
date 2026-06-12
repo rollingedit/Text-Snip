@@ -1,0 +1,62 @@
+[
+  {
+    "id": "windows10x64",
+    "description": "Run the automated stack on Windows 10 x64."
+  },
+  {
+    "id": "amdCpu",
+    "description": "Run the automated stack on an AMD x64 CPU."
+  },
+  {
+    "id": "dpi100",
+    "description": "Verify hotkey snip at 100% display scaling."
+  },
+  {
+    "id": "dpi125",
+    "description": "Verify hotkey snip at 125% display scaling."
+  },
+  {
+    "id": "dpi150",
+    "description": "Verify hotkey snip at 150% display scaling."
+  },
+  {
+    "id": "mixedDpi",
+    "description": "Verify hotkey snip with at least two monitors using different scaling."
+  },
+  {
+    "id": "negativeVirtualMonitor",
+    "description": "Verify hotkey snip with a monitor positioned left of or above the primary display."
+  },
+  {
+    "id": "lightTheme",
+    "description": "Verify app launch, settings, toast, and hotkey snip in Windows light theme."
+  },
+  {
+    "id": "darkTheme",
+    "description": "Verify app launch, settings, toast, and hotkey snip in Windows dark theme."
+  },
+  {
+    "id": "standardAccount",
+    "description": "Run release verification from a non-elevated standard account."
+  },
+  {
+    "id": "adminAccount",
+    "description": "Run release verification from an elevated admin account."
+  },
+  {
+    "id": "postRebootHotkey",
+    "description": "Enable launch at login, reboot, sign in, and verify Ctrl+Shift+O starts a snip."
+  },
+  {
+    "id": "multiMonitorCapture",
+    "description": "Select text on each monitor and across monitor boundaries where the layout permits; verify copied text matches the target."
+  },
+  {
+    "id": "intelModelLoad",
+    "description": "Run OCR self-tests or fixture OCR on an Intel x64 CPU."
+  },
+  {
+    "id": "amdModelLoad",
+    "description": "Run OCR self-tests or fixture OCR on an AMD x64 CPU."
+  }
+]

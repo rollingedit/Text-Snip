@@ -9,23 +9,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $source = Resolve-Path $SourcePath
 $destination = Join-Path $repoRoot $EvidencePath
 
-$knownGates = @(
-    "windows10x64",
-    "amdCpu",
-    "dpi100",
-    "dpi125",
-    "dpi150",
-    "mixedDpi",
-    "negativeVirtualMonitor",
-    "lightTheme",
-    "darkTheme",
-    "standardAccount",
-    "adminAccount",
-    "postRebootHotkey",
-    "multiMonitorCapture",
-    "intelModelLoad",
-    "amdModelLoad"
-)
+$knownGates = @((Get-Content (Join-Path $PSScriptRoot "validation-gates.json") -Raw | ConvertFrom-Json).id)
 
 function New-BlankEvidence {
     $data = [ordered]@{}
