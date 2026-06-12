@@ -18,6 +18,8 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
     private InferenceSession? _recognizer;
     private string[]? _characters;
 
+    public OcrOptions Options { get; } = new();
+
     public Task WarmAsync(CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -32,14 +34,14 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
         EnsureLoaded();
 
         using var source = BitmapSourceToBgrMat(crop);
-        using var boosted = ApplySmallTextBoost(source);
+        using var boosted = ApplySmallTextBoost(source, Options.SmallTextBoost);
         var lines = DetectLines(boosted, cancellationToken)
             .Select(box => RecognizeLine(boosted, box, cancellationToken))
             .Where(line => !string.IsNullOrWhiteSpace(line.Text) && line.Confidence >= 0.30f)
             .ToArray();
 
         var ordered = SortLines(lines);
-        return Task.FromResult(new OcrResult(FormatLines(ordered), ordered));
+        return Task.FromResult(new OcrResult(FormatLines(ordered, Options.CopyMode), ordered));
     }
 
     public void Unload()
@@ -270,11 +272,18 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
         return bgr;
     }
 
-    private static Mat ApplySmallTextBoost(Mat source)
+    private static Mat ApplySmallTextBoost(Mat source, SmallTextBoostMode mode)
     {
         var maxSide = Math.Max(source.Width, source.Height);
         var minSide = Math.Min(source.Width, source.Height);
-        var scale = maxSide < 900 ? 2.0 : maxSide < 1400 && minSide < 700 ? 1.5 : 1.0;
+        var scale = mode switch
+        {
+            SmallTextBoostMode.Off => 1.0,
+            SmallTextBoostMode.Scale150 => 1.5,
+            SmallTextBoostMode.Scale200 => 2.0,
+            SmallTextBoostMode.Scale300 => 3.0,
+            _ => maxSide < 900 ? 2.0 : maxSide < 1400 && minSide < 700 ? 1.5 : 1.0
+        };
         var finalMax = maxSide * scale;
         if (finalMax > 1800)
         {
@@ -368,8 +377,13 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
             .ToArray();
     }
 
-    private static string FormatLines(IReadOnlyList<OcrLine> lines)
+    private static string FormatLines(IReadOnlyList<OcrLine> lines, OcrCopyMode copyMode)
     {
+        if (copyMode == OcrCopyMode.Code)
+        {
+            return string.Join(Environment.NewLine, lines.Select(line => line.Text).Where(text => text.Length > 0));
+        }
+
         return string.Join(Environment.NewLine, lines.Select(line => line.Text.Trim()).Where(text => text.Length > 0));
     }
 

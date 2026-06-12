@@ -29,6 +29,7 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
             }
 
             ShowToast("Reading...");
+            ApplyOcrOptions();
             var bitmap = await ScreenCapture.CaptureAsync(selection.Value).ConfigureAwait(true);
             var result = await ocrEngine.RecognizeAsync(bitmap, CancellationToken.None).ConfigureAwait(true);
             ScheduleUnload();
@@ -93,5 +94,23 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
             _ => TimeSpan.FromMinutes(10)
         };
         _unloadTimer.Change(dueTime, Timeout.InfiniteTimeSpan);
+    }
+
+    private void ApplyOcrOptions()
+    {
+        ocrEngine.Options.SmallTextBoost = settings.SmallTextBoost switch
+        {
+            SmallTextBoost.Off => SmallTextBoostMode.Off,
+            SmallTextBoost.Scale150 => SmallTextBoostMode.Scale150,
+            SmallTextBoost.Scale200 => SmallTextBoostMode.Scale200,
+            SmallTextBoost.Scale300 => SmallTextBoostMode.Scale300,
+            _ => SmallTextBoostMode.Auto
+        };
+        ocrEngine.Options.CopyMode = settings.CopyMode switch
+        {
+            CopyMode.Code => OcrCopyMode.Code,
+            CopyMode.Smart => OcrCopyMode.Smart,
+            _ => OcrCopyMode.Raw
+        };
     }
 }

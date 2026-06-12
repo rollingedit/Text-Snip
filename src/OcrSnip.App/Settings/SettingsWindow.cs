@@ -9,7 +9,7 @@ public sealed class SettingsWindow : Window
     {
         Title = "OCR Snip Settings";
         Width = 360;
-        Height = 290;
+        Height = 340;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
 
@@ -21,6 +21,9 @@ public sealed class SettingsWindow : Window
         panel.Children.Add(new TextBlock { Text = "Small text boost" });
         var boost = new System.Windows.Controls.ComboBox { ItemsSource = Enum.GetValues<SmallTextBoost>(), SelectedItem = settings.SmallTextBoost, Margin = new Thickness(0, 4, 0, 12) };
         panel.Children.Add(boost);
+        panel.Children.Add(new TextBlock { Text = "Copy mode" });
+        var copyMode = new System.Windows.Controls.ComboBox { ItemsSource = Enum.GetValues<CopyMode>(), SelectedItem = settings.CopyMode, Margin = new Thickness(0, 4, 0, 12) };
+        panel.Children.Add(copyMode);
         var toast = new System.Windows.Controls.CheckBox { Content = "Show toast", IsChecked = settings.ToastEnabled, Margin = new Thickness(0, 0, 0, 12) };
         panel.Children.Add(toast);
         var launchAtLogin = new System.Windows.Controls.CheckBox { Content = "Launch at login", IsChecked = settings.LaunchAtLogin, Margin = new Thickness(0, 0, 0, 12) };
@@ -30,6 +33,7 @@ public sealed class SettingsWindow : Window
         {
             settings.MemoryMode = (MemoryMode)memory.SelectedItem;
             settings.SmallTextBoost = (SmallTextBoost)boost.SelectedItem;
+            settings.CopyMode = (CopyMode)copyMode.SelectedItem;
             settings.ToastEnabled = toast.IsChecked == true;
             settings.LaunchAtLogin = launchAtLogin.IsChecked == true;
             store.Save(settings);

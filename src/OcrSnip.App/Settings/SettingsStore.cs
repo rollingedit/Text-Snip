@@ -7,10 +7,15 @@ public sealed class SettingsStore
 {
     private readonly JsonSerializerOptions _jsonOptions = new() { WriteIndented = true };
 
-    public string SettingsPath { get; } = Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-        "OcrSnip",
-        "settings.json");
+    public SettingsStore(string? settingsPath = null)
+    {
+        SettingsPath = settingsPath ?? Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+            "OcrSnip",
+            "settings.json");
+    }
+
+    public string SettingsPath { get; }
 
     public AppSettings Load()
     {
