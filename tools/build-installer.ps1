@@ -7,6 +7,7 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $iscc = Get-Command ISCC.exe -ErrorAction SilentlyContinue
 if ($null -eq $iscc) {
     $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe",
         "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
         "C:\Program Files\Inno Setup 6\ISCC.exe"
     )
