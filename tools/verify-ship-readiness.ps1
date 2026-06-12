@@ -26,6 +26,28 @@ $requiredExternalGates = @(
     "amdModelLoad"
 )
 
+function Assert-ValidEvidenceFile($Evidence) {
+    foreach ($property in $Evidence.PSObject.Properties) {
+        if ($requiredExternalGates -notcontains $property.Name) {
+            throw "Unknown validation gate '$($property.Name)' in $evidenceFile"
+        }
+
+        $entry = $property.Value
+        if ($null -eq $entry -or $entry.passed -ne $true) {
+            continue
+        }
+
+        if ([string]::IsNullOrWhiteSpace($entry.evidence)) {
+            throw "Validation gate '$($property.Name)' is marked passed but has no evidence text."
+        }
+
+        $timestamp = [datetimeoffset]::MinValue
+        if (![datetimeoffset]::TryParse([string]$entry.verifiedAt, [ref]$timestamp)) {
+            throw "Validation gate '$($property.Name)' is marked passed but has an invalid verifiedAt timestamp."
+        }
+    }
+}
+
 function Get-CurrentMachineEvidence {
     $compatibilityReport = Join-Path $repoRoot "artifacts/reports/compatibility-report.txt"
     $signingReport = Join-Path $repoRoot "artifacts/reports/signing-status.txt"
@@ -96,6 +118,7 @@ if (!(Test-Path $evidenceFile)) {
 }
 
 $evidence = Get-Content $evidenceFile -Raw | ConvertFrom-Json
+Assert-ValidEvidenceFile $evidence
 $currentMachineEvidence = Get-CurrentMachineEvidence
 $missing = @()
 foreach ($gate in $requiredExternalGates) {
