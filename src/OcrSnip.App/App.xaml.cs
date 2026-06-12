@@ -1,4 +1,5 @@
 using System.Threading;
+using System.Runtime.InteropServices;
 using System.Windows;
 using OcrSnip.App.Hotkeys;
 using OcrSnip.App.Settings;
@@ -17,6 +18,7 @@ public partial class App : System.Windows.Application
 
     protected override void OnStartup(StartupEventArgs e)
     {
+        DpiAwareness.TryEnablePerMonitorV2();
         base.OnStartup(e);
 
         _mutex = new Mutex(true, "Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_Resident", out var createdNew);
@@ -51,4 +53,24 @@ public partial class App : System.Windows.Application
         _mutex?.Dispose();
         base.OnExit(e);
     }
+}
+
+file static class DpiAwareness
+{
+    private static readonly IntPtr DpiAwarenessContextPerMonitorAwareV2 = new(-4);
+
+    public static void TryEnablePerMonitorV2()
+    {
+        try
+        {
+            SetProcessDpiAwarenessContext(DpiAwarenessContextPerMonitorAwareV2);
+        }
+        catch
+        {
+            // Manifest DPI awareness is the primary path; this is best effort for older hosts.
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool SetProcessDpiAwarenessContext(IntPtr dpiContext);
 }
