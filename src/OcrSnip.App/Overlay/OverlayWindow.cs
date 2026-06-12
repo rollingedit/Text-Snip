@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using Forms = System.Windows.Forms;
 using WpfPoint = System.Windows.Point;
 
 namespace OcrSnip.App.Overlay;
@@ -11,6 +10,7 @@ public sealed class OverlayWindow : Window
     private readonly SelectionCanvas _canvas = new();
     private WpfPoint? _start;
     private Rect? _selection;
+    private Int32Rect? _physicalSelection;
 
     private OverlayWindow()
     {
@@ -63,6 +63,7 @@ public sealed class OverlayWindow : Window
 
             ReleaseMouseCapture();
             _selection = OverlayCoordinateMapper.Normalize(_start.Value, e.GetPosition(this));
+            _physicalSelection = ToPhysicalSelection(_selection.Value);
             DialogResult = _selection.Value.Width >= 4 && _selection.Value.Height >= 4;
             Close();
         };
@@ -72,15 +73,19 @@ public sealed class OverlayWindow : Window
     {
         var window = new OverlayWindow();
         var accepted = window.ShowDialog() == true;
-        if (!accepted || window._selection is null)
+        if (!accepted || window._physicalSelection is null)
         {
             return null;
         }
 
-        var rect = window._selection.Value;
-        var scaleX = Forms.Screen.PrimaryScreen?.Bounds.Width / SystemParameters.PrimaryScreenWidth ?? 1.0;
-        var scaleY = Forms.Screen.PrimaryScreen?.Bounds.Height / SystemParameters.PrimaryScreenHeight ?? 1.0;
-        return OverlayCoordinateMapper.ToPhysicalRect(rect, window.Left, window.Top, scaleX, scaleY);
+        return window._physicalSelection;
+    }
+
+    private Int32Rect ToPhysicalSelection(Rect rect)
+    {
+        return OverlayCoordinateMapper.FromPhysicalPoints(
+            PointToScreen(new WpfPoint(rect.Left, rect.Top)),
+            PointToScreen(new WpfPoint(rect.Right, rect.Bottom)));
     }
 }
 

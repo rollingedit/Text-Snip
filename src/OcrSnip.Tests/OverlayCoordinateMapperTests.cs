@@ -14,13 +14,24 @@ public sealed class OverlayCoordinateMapperTests
     }
 
     [Fact]
-    public void ToPhysicalRect_HandlesNegativeVirtualOriginAndScaling()
+    public void FromPhysicalPoints_HandlesNegativeVirtualCoordinates()
     {
-        var rect = OverlayCoordinateMapper.ToPhysicalRect(new Rect(20, 10, 200, 100), -160, 40, 1.5, 1.5);
+        var rect = OverlayCoordinateMapper.FromPhysicalPoints(new Point(-1840, 120), new Point(-1320, 420));
 
-        Assert.Equal(-210, rect.X);
-        Assert.Equal(75, rect.Y);
-        Assert.Equal(300, rect.Width);
-        Assert.Equal(150, rect.Height);
+        Assert.Equal(-1840, rect.X);
+        Assert.Equal(120, rect.Y);
+        Assert.Equal(520, rect.Width);
+        Assert.Equal(300, rect.Height);
+    }
+
+    [Fact]
+    public void FromPhysicalPoints_NormalizesReverseDrag()
+    {
+        var rect = OverlayCoordinateMapper.FromPhysicalPoints(new Point(300.4, 240.4), new Point(100.2, 80.2));
+
+        Assert.Equal(100, rect.X);
+        Assert.Equal(80, rect.Y);
+        Assert.Equal(200, rect.Width);
+        Assert.Equal(160, rect.Height);
     }
 }

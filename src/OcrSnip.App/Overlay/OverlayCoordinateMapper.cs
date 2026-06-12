@@ -5,13 +5,13 @@ namespace OcrSnip.App.Overlay;
 
 public static class OverlayCoordinateMapper
 {
-    public static Int32Rect ToPhysicalRect(Rect selectionDip, double virtualLeftDip, double virtualTopDip, double scaleX, double scaleY)
+    public static Int32Rect FromPhysicalPoints(WpfPoint a, WpfPoint b)
     {
-        var left = (int)Math.Round((virtualLeftDip + selectionDip.X) * scaleX);
-        var top = (int)Math.Round((virtualTopDip + selectionDip.Y) * scaleY);
-        var width = Math.Max(1, (int)Math.Round(selectionDip.Width * scaleX));
-        var height = Math.Max(1, (int)Math.Round(selectionDip.Height * scaleY));
-        return new Int32Rect(left, top, width, height);
+        var left = (int)Math.Round(Math.Min(a.X, b.X));
+        var top = (int)Math.Round(Math.Min(a.Y, b.Y));
+        var right = (int)Math.Round(Math.Max(a.X, b.X));
+        var bottom = (int)Math.Round(Math.Max(a.Y, b.Y));
+        return new Int32Rect(left, top, Math.Max(1, right - left), Math.Max(1, bottom - top));
     }
 
     public static Rect Normalize(WpfPoint a, WpfPoint b)
