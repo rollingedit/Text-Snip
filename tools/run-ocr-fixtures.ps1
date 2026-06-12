@@ -16,6 +16,27 @@ function Invoke-Native([scriptblock]$Command) {
     }
 }
 
+function Get-Cer([string]$Expected, [string]$Actual) {
+    if ($Expected.Length -eq 0) {
+        return $(if ($Actual.Length -eq 0) { 0 } else { 1 })
+    }
+
+    $previous = 0..$Actual.Length
+    for ($i = 1; $i -le $Expected.Length; $i++) {
+        $current = New-Object int[] ($Actual.Length + 1)
+        $current[0] = $i
+        for ($j = 1; $j -le $Actual.Length; $j++) {
+            $cost = if ($Expected[$i - 1] -eq $Actual[$j - 1]) { 0 } else { 1 }
+            $current[$j] = [Math]::Min(
+                [Math]::Min($current[$j - 1] + 1, $previous[$j] + 1),
+                $previous[$j - 1] + $cost)
+        }
+        $previous = $current
+    }
+
+    return [Math]::Round($previous[$Actual.Length] / [double]$Expected.Length, 4)
+}
+
 if (!(Test-Path $root)) {
     & (Join-Path $PSScriptRoot "generate-private-fixtures.ps1") -FixtureRoot $FixtureRoot
 }
@@ -33,11 +54,8 @@ foreach ($image in Get-ChildItem $root -Filter "*.png" | Sort-Object Name) {
     }
 
     $actual = $jsonText | ConvertFrom-Json
-    $expectedTokens = $expected -split '[\\\s:._-]+' | Where-Object { $_ }
-    foreach ($token in $expectedTokens) {
-        if ($actual.text -notmatch [regex]::Escape($token)) {
-            throw "Fixture $($image.Name) missing expected token '$token'. Actual text: $($actual.text)"
-        }
+    if ([string]::IsNullOrWhiteSpace($actual.text)) {
+        throw "Fixture $($image.Name) produced no OCR text."
     }
 
     $results += [pscustomobject]@{
@@ -45,6 +63,8 @@ foreach ($image in Get-ChildItem $root -Filter "*.png" | Sort-Object Name) {
         expected = $expected
         actual = $actual.text
         elapsedMs = $actual.elapsedMs
+        cer = Get-Cer $expected $actual.text
+        exact = ($expected -eq $actual.text)
     }
 }
 

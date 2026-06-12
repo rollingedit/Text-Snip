@@ -63,8 +63,7 @@ public static class OcrDetectorPostProcessor
                 continue;
             }
 
-            using var roi = new Mat(probability, clipped);
-            var score = Cv2.Mean(roi).Val0;
+            var score = BoxScore(probability, contour, clipped);
             if (score < boxThreshold)
             {
                 continue;
@@ -83,5 +82,14 @@ public static class OcrDetectorPostProcessor
     private static float Clamp(float value, float min, float max)
     {
         return MathF.Min(max, MathF.Max(min, value));
+    }
+
+    private static double BoxScore(Mat probability, CvPoint[] contour, OpenCvSharp.Rect bounds)
+    {
+        using var mask = new Mat(bounds.Height, bounds.Width, MatType.CV_8UC1, Scalar.All(0));
+        var shifted = contour.Select(point => new CvPoint(point.X - bounds.X, point.Y - bounds.Y)).ToArray();
+        Cv2.FillPoly(mask, [shifted], Scalar.All(255));
+        using var roi = new Mat(probability, bounds);
+        return Cv2.Mean(roi, mask).Val0;
     }
 }

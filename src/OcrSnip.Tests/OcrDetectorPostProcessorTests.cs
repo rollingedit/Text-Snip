@@ -42,4 +42,24 @@ public sealed class OcrDetectorPostProcessorTests
 
         Assert.Empty(boxes);
     }
+
+    [Fact]
+    public void GetBoxes_ScoresContourMaskNotEntireBoundingNoise()
+    {
+        using var probability = new OpenCvSharp.Mat(64, 64, OpenCvSharp.MatType.CV_32FC1, OpenCvSharp.Scalar.All(0.1));
+        using var mask = new OpenCvSharp.Mat(64, 64, OpenCvSharp.MatType.CV_8UC1, OpenCvSharp.Scalar.All(0));
+        var points = new[]
+        {
+            new OpenCvSharp.Point(20, 10),
+            new OpenCvSharp.Point(44, 32),
+            new OpenCvSharp.Point(20, 54),
+            new OpenCvSharp.Point(8, 32)
+        };
+        OpenCvSharp.Cv2.FillPoly(probability, [points], OpenCvSharp.Scalar.All(0.95));
+        OpenCvSharp.Cv2.FillPoly(mask, [points], OpenCvSharp.Scalar.All(255));
+
+        var boxes = OcrDetectorPostProcessor.GetBoxes(probability, mask, 640, 640, boxThreshold: 0.80f);
+
+        Assert.Single(boxes);
+    }
 }

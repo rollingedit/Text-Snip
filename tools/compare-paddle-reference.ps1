@@ -45,4 +45,6 @@ foreach ($fixture in $fixtureResults) {
 
 New-Item -ItemType Directory -Force -Path (Split-Path $output -Parent) | Out-Null
 $comparisons | ConvertTo-Json -Depth 4 | Set-Content $output
-Write-Host "Paddle parity comparison written to $output"
+$matched = @($comparisons | Where-Object matches).Count
+$total = @($comparisons).Count
+Write-Host "Paddle parity comparison written to $output ($matched/$total exact matches)"

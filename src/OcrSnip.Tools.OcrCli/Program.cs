@@ -6,7 +6,7 @@ using OcrSnip.Ocr;
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: OcrSnip.Tools.OcrCli <image-path> [--json]");
+    Console.Error.WriteLine("Usage: OcrSnip.Tools.OcrCli <image-path> [--json] [--small-text-boost <Auto|Off|Scale150|Scale200|Scale300>]");
     return 2;
 }
 
@@ -33,6 +33,7 @@ bitmap.EndInit();
 bitmap.Freeze();
 
 using var engine = new OcrEngine(modelPaths);
+engine.Options.SmallTextBoost = ParseSmallTextBoost(args);
 var stopwatch = Stopwatch.StartNew();
 var result = await engine.RecognizeAsync(bitmap, CancellationToken.None);
 stopwatch.Stop();
@@ -44,7 +45,7 @@ if (json)
         image = imagePath,
         elapsedMs = stopwatch.ElapsedMilliseconds,
         text = result.Text,
-        lines = result.Lines.Select(line => new { line.Text, line.Confidence })
+        lines = result.Lines.Select(line => new { line.Text, line.Confidence, line.Bounds })
     }, new JsonSerializerOptions { WriteIndented = true }));
 }
 else
@@ -69,4 +70,20 @@ static string FindRepoRoot(string start)
     }
 
     throw new InvalidOperationException("Could not locate repository root.");
+}
+
+static SmallTextBoostMode ParseSmallTextBoost(string[] args)
+{
+    var index = Array.FindIndex(args, argument => string.Equals(argument, "--small-text-boost", StringComparison.OrdinalIgnoreCase));
+    if (index < 0)
+    {
+        return SmallTextBoostMode.Auto;
+    }
+
+    if (index + 1 >= args.Length || !Enum.TryParse<SmallTextBoostMode>(args[index + 1], ignoreCase: true, out var mode))
+    {
+        throw new ArgumentException("Invalid --small-text-boost value.");
+    }
+
+    return mode;
 }

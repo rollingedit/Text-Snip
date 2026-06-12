@@ -28,11 +28,9 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
         EnsureLoaded();
 
         using var source = OcrImageOperations.BitmapSourceToBgrMat(crop);
-        using var boosted = OcrImageOperations.ApplySmallTextBoost(source, Options.SmallTextBoost);
-        var lines = DetectLines(boosted, cancellationToken)
-            .Select(box => RecognizeLine(boosted, box, cancellationToken))
-            .Where(line => !string.IsNullOrWhiteSpace(line.Text) && line.Confidence >= 0.30f)
-            .ToArray();
+        var lines = Options.SmallTextBoost == SmallTextBoostMode.Auto
+            ? RecognizeAuto(source, cancellationToken)
+            : RecognizeScaled(source, Options.SmallTextBoost, cancellationToken);
 
         var ordered = OcrTextFormatter.SortLines(lines);
         return Task.FromResult(new OcrResult(OcrTextFormatter.FormatLines(ordered, Options.CopyMode), ordered));
@@ -52,7 +50,33 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
 
     public void Dispose() => Unload();
 
-    private IReadOnlyList<OcrQuadrilateral> DetectLines(Mat image, CancellationToken cancellationToken)
+    private IReadOnlyList<OcrLine> RecognizeAuto(Mat source, CancellationToken cancellationToken)
+    {
+        var originalLines = RecognizeLines(source, cancellationToken, unclipRatio: 2.0);
+        using var boosted = OcrImageOperations.ApplySmallTextBoost(source, SmallTextBoostMode.Auto);
+        var boostedLines = RecognizeLines(boosted, cancellationToken, unclipRatio: 1.4)
+            .Select(line => ScaleLine(line, source.Width / (float)boosted.Width, source.Height / (float)boosted.Height));
+
+        return MergeOverlappingLines(originalLines.Concat(boostedLines));
+    }
+
+    private IReadOnlyList<OcrLine> RecognizeScaled(Mat source, SmallTextBoostMode boostMode, CancellationToken cancellationToken)
+    {
+        using var processed = OcrImageOperations.ApplySmallTextBoost(source, boostMode);
+        return RecognizeLines(processed, cancellationToken, unclipRatio: 1.4)
+            .Select(line => ScaleLine(line, source.Width / (float)processed.Width, source.Height / (float)processed.Height))
+            .ToArray();
+    }
+
+    private IReadOnlyList<OcrLine> RecognizeLines(Mat image, CancellationToken cancellationToken, double unclipRatio)
+    {
+        return DetectLines(image, cancellationToken, unclipRatio)
+            .Select(box => RecognizeLine(image, box, cancellationToken))
+            .Where(line => !string.IsNullOrWhiteSpace(line.Text) && line.Confidence >= 0.30f)
+            .ToArray();
+    }
+
+    private IReadOnlyList<OcrQuadrilateral> DetectLines(Mat image, CancellationToken cancellationToken, double unclipRatio)
     {
         var detector = _detector ?? throw new InvalidOperationException("Detector is not loaded.");
         var scale = GetDetectorScale(image.Width, image.Height);
@@ -65,7 +89,7 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
         using var results = detector.Run([NamedOnnxValue.CreateFromTensor("x", input)]);
         cancellationToken.ThrowIfCancellationRequested();
 
-        return OcrDetectorPostProcessor.GetBoxes(results[0].AsTensor<float>(), image.Width, image.Height);
+        return OcrDetectorPostProcessor.GetBoxes(results[0].AsTensor<float>(), image.Width, image.Height, unclipRatio: unclipRatio);
     }
 
     private OcrLine RecognizeLine(Mat image, OcrQuadrilateral box, CancellationToken cancellationToken)
@@ -124,6 +148,89 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
         return Math.Max(multiple, (int)Math.Ceiling(value / (double)multiple) * multiple);
     }
 
+    private static IReadOnlyList<OcrLine> MergeOverlappingLines(IEnumerable<OcrLine> candidates)
+    {
+        var merged = new List<OcrLine>();
+        foreach (var candidate in candidates)
+        {
+            var existingIndex = merged.FindIndex(line => Overlaps(line.Bounds, candidate.Bounds));
+            if (existingIndex < 0)
+            {
+                merged.Add(candidate);
+                continue;
+            }
+
+            if (IsBetterLine(candidate, merged[existingIndex]))
+            {
+                merged[existingIndex] = candidate;
+            }
+        }
+
+        return merged;
+    }
+
+    private static bool IsBetterLine(OcrLine candidate, OcrLine existing)
+    {
+        var candidateLength = candidate.Text.Count(character => !char.IsWhiteSpace(character));
+        var existingLength = existing.Text.Count(character => !char.IsWhiteSpace(character));
+        if (candidateLength >= existingLength + 2 && candidate.Confidence >= existing.Confidence - 0.06f)
+        {
+            return true;
+        }
+
+        if (existingLength >= candidateLength + 2 && existing.Confidence >= candidate.Confidence - 0.06f)
+        {
+            return false;
+        }
+
+        return candidate.Confidence > existing.Confidence;
+    }
+
+    private static bool Overlaps(OcrQuadrilateral first, OcrQuadrilateral second)
+    {
+        var a = Bounds(first);
+        var b = Bounds(second);
+        var intersectionWidth = Math.Max(0, Math.Min(a.Right, b.Right) - Math.Max(a.Left, b.Left));
+        var intersectionHeight = Math.Max(0, Math.Min(a.Bottom, b.Bottom) - Math.Max(a.Top, b.Top));
+        var intersection = intersectionWidth * intersectionHeight;
+        if (intersection <= 0)
+        {
+            return false;
+        }
+
+        var smallerArea = Math.Min(a.Width * a.Height, b.Width * b.Height);
+        return smallerArea > 0 && intersection / smallerArea >= 0.55f;
+    }
+
+    private static (float Left, float Top, float Right, float Bottom, float Width, float Height) Bounds(OcrQuadrilateral box)
+    {
+        var xs = new[] { box.TopLeft.X, box.TopRight.X, box.BottomRight.X, box.BottomLeft.X };
+        var ys = new[] { box.TopLeft.Y, box.TopRight.Y, box.BottomRight.Y, box.BottomLeft.Y };
+        var left = xs.Min();
+        var top = ys.Min();
+        var right = xs.Max();
+        var bottom = ys.Max();
+        return (left, top, right, bottom, right - left, bottom - top);
+    }
+
+    private static OcrLine ScaleLine(OcrLine line, float scaleX, float scaleY)
+    {
+        return line with { Bounds = ScaleBox(line.Bounds, scaleX, scaleY) };
+    }
+
+    private static OcrQuadrilateral ScaleBox(OcrQuadrilateral box, float scaleX, float scaleY)
+    {
+        return new OcrQuadrilateral(
+            ScalePoint(box.TopLeft, scaleX, scaleY),
+            ScalePoint(box.TopRight, scaleX, scaleY),
+            ScalePoint(box.BottomRight, scaleX, scaleY),
+            ScalePoint(box.BottomLeft, scaleX, scaleY));
+    }
+
+    private static OcrPoint ScalePoint(OcrPoint point, float scaleX, float scaleY)
+    {
+        return new OcrPoint(point.X * scaleX, point.Y * scaleY);
+    }
 }
 
 public sealed record OcrResult(string Text, IReadOnlyList<OcrLine> Lines);
