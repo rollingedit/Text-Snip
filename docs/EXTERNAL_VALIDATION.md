@@ -32,6 +32,20 @@ For post-reboot hotkey validation, register the one-time logon task, reboot, sig
 powershell -ExecutionPolicy Bypass -File tools\prepare-post-reboot-validation.ps1
 ```
 
+For DPI, mixed-DPI, negative-coordinate, and multi-monitor runs, use the display validator after setting up the target display layout:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validate-display-environment.ps1 -ExpectedDpiScale 125
+powershell -ExecutionPolicy Bypass -File tools\validate-display-environment.ps1 -ExpectedDpiScale 150
+powershell -ExecutionPolicy Bypass -File tools\validate-display-environment.ps1 -ExpectedDpiScale 100 -RequireMixedDpi -RequireNegativeVirtualMonitor -MultiMonitorCapturePassed
+```
+
+For admin-account validation, run this from an elevated PowerShell session:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File tools\validate-admin-environment.ps1 -RunChecks
+```
+
 ## Required Gates
 
 - `windows10x64`: Run the automated stack on Windows 10 x64.
