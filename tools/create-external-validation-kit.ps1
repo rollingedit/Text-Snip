@@ -58,6 +58,12 @@ Import that ZIP back in the repo with:
 ````powershell
 powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation-export.zip
 ````
+
+For post-reboot hotkey validation, prepare the one-time task, reboot, sign in, and wait for the task to write the export ZIP:
+
+````powershell
+powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -PreparePostRebootValidation
+````
 "@ | Set-Content (Join-Path $staging "README.md")
 
 New-Item -ItemType Directory -Force -Path (Split-Path $output -Parent) | Out-Null

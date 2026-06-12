@@ -9,8 +9,11 @@ param(
     [switch]$RequireNegativeVirtualMonitor,
     [switch]$IncludeDesktopHotkey,
     [switch]$IncludeHotkeyConflict,
+    [switch]$PreparePostRebootValidation,
+    [switch]$CompletePostRebootValidation,
     [switch]$PostRebootHotkeyPassed,
     [switch]$MultiMonitorCapturePassed,
+    [string]$TaskName = "OcrSnipKitPostRebootValidation",
     [string]$OutputRoot = "artifacts/reports"
 )
 
@@ -42,6 +45,20 @@ function New-BlankEvidence($Gates) {
     }
 
     return $data
+}
+
+function Convert-ToHashtable($InputObject) {
+    $hash = [ordered]@{}
+    foreach ($property in $InputObject.PSObject.Properties) {
+        if ($property.Value -is [pscustomobject]) {
+            $hash[$property.Name] = Convert-ToHashtable $property.Value
+        }
+        else {
+            $hash[$property.Name] = $property.Value
+        }
+    }
+
+    return $hash
 }
 
 function Set-Gate($Data, [string]$Gate, [string]$Evidence) {
@@ -84,7 +101,7 @@ function Test-IdleNoNetwork([int]$Seconds = 5) {
     }
 }
 
-function Test-DesktopHotkey([string]$ExpectedText = "OCR TEST", [int]$TimeoutSeconds = 15) {
+function Test-DesktopHotkey([string]$ExpectedText = "OCR TEST", [int]$TimeoutSeconds = 15, [switch]$UseExistingApp) {
     Add-Type -AssemblyName System.Windows.Forms
     Add-Type -AssemblyName System.Drawing
     Add-Type @"
@@ -121,8 +138,16 @@ Add-Type -AssemblyName System.Drawing
     try {
         Start-Sleep -Seconds 2
         Set-Clipboard -Value "__OCR_SNIP_PENDING__"
-        $app = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
-        Start-Sleep -Seconds 3
+        if ($UseExistingApp) {
+            $app = Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if (!$app) {
+                throw "OcrSnip.App was not already running after login."
+            }
+        }
+        else {
+            $app = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+            Start-Sleep -Seconds 3
+        }
 
         [ExternalValidationInputNative]::keybd_event(0x11, 0, 0, [UIntPtr]::Zero)
         [ExternalValidationInputNative]::keybd_event(0x10, 0, 0, [UIntPtr]::Zero)
@@ -153,13 +178,51 @@ Add-Type -AssemblyName System.Drawing
         throw "Desktop hotkey snip failed. Clipboard: $clipboard"
     }
     finally {
-        if ($app -and !$app.HasExited) {
+        if ($app -and !$UseExistingApp -and !$app.HasExited) {
             Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
         }
         if ($target -and !$target.HasExited) {
             Stop-Process -Id $target.Id -Force -ErrorAction SilentlyContinue
         }
     }
+}
+
+function Enable-LaunchAtLogin {
+    $runKey = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+    New-Item -Path $runKey -Force | Out-Null
+    Set-ItemProperty -Path $runKey -Name "OcrSnip" -Value "`"$exe`""
+}
+
+function Disable-LaunchAtLogin {
+    Remove-ItemProperty -Path "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run" -Name "OcrSnip" -ErrorAction SilentlyContinue
+}
+
+function Register-PostRebootTask {
+    $runner = Join-Path $PSScriptRoot "run-external-validation-kit.ps1"
+    $pwsh = (Get-Command powershell.exe).Source
+    $arguments = @("-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "`"$runner`"", "-CompletePostRebootValidation")
+    if ($ExpectedWindows) {
+        $arguments += @("-ExpectedWindows", $ExpectedWindows)
+    }
+    if ($ExpectedCpuVendor) {
+        $arguments += @("-ExpectedCpuVendor", $ExpectedCpuVendor)
+    }
+    if ($ExpectedDpiScale) {
+        $arguments += @("-ExpectedDpiScale", $ExpectedDpiScale)
+    }
+
+    $action = New-ScheduledTaskAction -Execute $pwsh -Argument ($arguments -join " ") -WorkingDirectory $kitRoot
+    $trigger = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+    $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive -RunLevel LeastPrivilege
+    $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -ExecutionTimeLimit (New-TimeSpan -Minutes 10)
+    Register-ScheduledTask -TaskName $TaskName -Action $action -Trigger $trigger -Principal $principal -Settings $settings -Force | Out-Null
+}
+
+function Complete-PostRebootValidation {
+    Start-Sleep -Seconds 8
+    Test-DesktopHotkey -UseExistingApp
+    Disable-LaunchAtLogin
+    Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
 }
 
 function Test-HotkeyConflict {
@@ -278,7 +341,12 @@ New-Item -ItemType Directory -Force -Path $outputDirectory | Out-Null
 
 Add-Type -AssemblyName System.Windows.Forms
 $gates = @((Get-Content $gateManifest -Raw | ConvertFrom-Json).id)
-$evidence = New-BlankEvidence $gates
+if (Test-Path $evidenceFile) {
+    $evidence = Convert-ToHashtable (Get-Content $evidenceFile -Raw | ConvertFrom-Json)
+}
+else {
+    $evidence = New-BlankEvidence $gates
+}
 $os = Get-CimInstance Win32_OperatingSystem
 $cpu = Get-CimInstance Win32_Processor | Select-Object -First 1
 $screens = [System.Windows.Forms.Screen]::AllScreens
@@ -288,6 +356,19 @@ $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administ
 
 $desktopHotkeyPassed = $false
 $hotkeyConflictPassed = $false
+
+if ($PreparePostRebootValidation) {
+    Enable-LaunchAtLogin
+    Register-PostRebootTask
+    Write-Host "Prepared post-reboot validation. Reboot, sign in, and wait for the one-time validation task to run."
+    return
+}
+
+if ($CompletePostRebootValidation) {
+    Complete-PostRebootValidation
+    $PostRebootHotkeyPassed = $true
+    $desktopHotkeyPassed = $true
+}
 
 Invoke-AppSelfTests
 Test-IdleNoNetwork
