@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Media.Imaging;
 using OcrSnip.App.Capture;
 using OcrSnip.App.Clipboard;
 using OcrSnip.App.Overlay;
@@ -8,10 +9,52 @@ using OcrSnip.Ocr;
 
 namespace OcrSnip.App;
 
-public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine)
+public sealed class SnipWorkflow
 {
+    private readonly SettingsStore _settingsStore;
+    private readonly AppSettings _settings;
+    private readonly IWorkflowOcrEngine _ocrEngine;
+    private readonly ISnipSelectionService _selection;
+    private readonly IScreenCaptureService _capture;
+    private readonly IClipboardWriter _clipboard;
+    private readonly IToastService _toast;
+    private readonly IResultPresenter _resultPresenter;
     private readonly SemaphoreSlim _gate = new(1, 1);
-    private readonly System.Threading.Timer _unloadTimer = new(_ => ocrEngine.Unload());
+    private readonly System.Threading.Timer _unloadTimer;
+
+    public SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine)
+        : this(
+            settingsStore,
+            settings,
+            new OcrEngineAdapter(ocrEngine),
+            new OverlaySelectionService(),
+            new GdiScreenCaptureService(),
+            new WpfClipboardWriter(),
+            new ToastWindowService(),
+            new ResultWindowPresenter())
+    {
+    }
+
+    public SnipWorkflow(
+        SettingsStore settingsStore,
+        AppSettings settings,
+        IWorkflowOcrEngine ocrEngine,
+        ISnipSelectionService selection,
+        IScreenCaptureService capture,
+        IClipboardWriter clipboard,
+        IToastService toast,
+        IResultPresenter resultPresenter)
+    {
+        _settingsStore = settingsStore;
+        _settings = settings;
+        _ocrEngine = ocrEngine;
+        _selection = selection;
+        _capture = capture;
+        _clipboard = clipboard;
+        _toast = toast;
+        _resultPresenter = resultPresenter;
+        _unloadTimer = new System.Threading.Timer(_ => _ocrEngine.Unload());
+    }
 
     public async Task StartSnipAsync()
     {
@@ -22,7 +65,7 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
 
         try
         {
-            var selection = OverlayWindow.SelectRectangle();
+            var selection = _selection.SelectRectangle();
             if (selection is null)
             {
                 return;
@@ -30,8 +73,8 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
 
             ShowToast("Reading...");
             ApplyOcrOptions();
-            var bitmap = await ScreenCapture.CaptureAsync(selection.Value).ConfigureAwait(true);
-            var result = await ocrEngine.RecognizeAsync(bitmap, CancellationToken.None).ConfigureAwait(true);
+            var bitmap = await _capture.CaptureAsync(selection.Value).ConfigureAwait(true);
+            var result = await _ocrEngine.RecognizeAsync(bitmap, CancellationToken.None).ConfigureAwait(true);
             ScheduleUnload();
             if (string.IsNullOrWhiteSpace(result.Text))
             {
@@ -39,14 +82,14 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
                 return;
             }
 
-            if (ClipboardService.TrySetText(result.Text, out _))
+            if (_clipboard.TrySetText(result.Text, out _))
             {
                 ShowToast("Copied");
                 return;
             }
 
             ShowToast("Clipboard busy - text opened");
-            ResultWindow.ShowResult(result.Text);
+            _resultPresenter.ShowResult(result.Text);
         }
         catch (ModelUnavailableException ex)
         {
@@ -54,7 +97,7 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
         }
         catch (Exception)
         {
-            ocrEngine.Unload();
+            _ocrEngine.Unload();
             ShowToast("OCR failed");
         }
         finally
@@ -65,7 +108,7 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
 
     public void ShowSettings()
     {
-        var window = new SettingsWindow(settingsStore, settings);
+        var window = new SettingsWindow(_settingsStore, _settings);
         window.Show();
         window.Activate();
     }
@@ -78,15 +121,15 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
 
     private void ShowToast(string message)
     {
-        if (settings.ToastEnabled)
+        if (_settings.ToastEnabled)
         {
-            ToastWindow.ShowMessage(message);
+            _toast.ShowMessage(message);
         }
     }
 
     private void ScheduleUnload()
     {
-        var dueTime = settings.MemoryMode switch
+        var dueTime = _settings.MemoryMode switch
         {
             MemoryMode.LowMemory => TimeSpan.FromSeconds(60),
             MemoryMode.Balanced => TimeSpan.FromMinutes(10),
@@ -98,7 +141,7 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
 
     private void ApplyOcrOptions()
     {
-        ocrEngine.Options.SmallTextBoost = settings.SmallTextBoost switch
+        _ocrEngine.Options.SmallTextBoost = _settings.SmallTextBoost switch
         {
             SmallTextBoost.Off => SmallTextBoostMode.Off,
             SmallTextBoost.Scale150 => SmallTextBoostMode.Scale150,
@@ -106,11 +149,75 @@ public sealed class SnipWorkflow(SettingsStore settingsStore, AppSettings settin
             SmallTextBoost.Scale300 => SmallTextBoostMode.Scale300,
             _ => SmallTextBoostMode.Auto
         };
-        ocrEngine.Options.CopyMode = settings.CopyMode switch
+        _ocrEngine.Options.CopyMode = _settings.CopyMode switch
         {
             CopyMode.Code => OcrCopyMode.Code,
             CopyMode.Smart => OcrCopyMode.Smart,
             _ => OcrCopyMode.Raw
         };
     }
+}
+
+public interface IWorkflowOcrEngine
+{
+    OcrOptions Options { get; }
+    Task<OcrResult> RecognizeAsync(BitmapSource crop, CancellationToken cancellationToken);
+    void Unload();
+}
+
+public interface ISnipSelectionService
+{
+    Int32Rect? SelectRectangle();
+}
+
+public interface IScreenCaptureService
+{
+    Task<BitmapSource> CaptureAsync(Int32Rect rectangle);
+}
+
+public interface IClipboardWriter
+{
+    bool TrySetText(string text, out Exception? error);
+}
+
+public interface IToastService
+{
+    void ShowMessage(string message);
+}
+
+public interface IResultPresenter
+{
+    void ShowResult(string text);
+}
+
+file sealed class OcrEngineAdapter(OcrEngine engine) : IWorkflowOcrEngine
+{
+    public OcrOptions Options => engine.Options;
+    public Task<OcrResult> RecognizeAsync(BitmapSource crop, CancellationToken cancellationToken) => engine.RecognizeAsync(crop, cancellationToken);
+    public void Unload() => engine.Unload();
+}
+
+file sealed class OverlaySelectionService : ISnipSelectionService
+{
+    public Int32Rect? SelectRectangle() => OverlayWindow.SelectRectangle();
+}
+
+file sealed class GdiScreenCaptureService : IScreenCaptureService
+{
+    public Task<BitmapSource> CaptureAsync(Int32Rect rectangle) => ScreenCapture.CaptureAsync(rectangle);
+}
+
+file sealed class WpfClipboardWriter : IClipboardWriter
+{
+    public bool TrySetText(string text, out Exception? error) => ClipboardService.TrySetText(text, out error);
+}
+
+file sealed class ToastWindowService : IToastService
+{
+    public void ShowMessage(string message) => ToastWindow.ShowMessage(message);
+}
+
+file sealed class ResultWindowPresenter : IResultPresenter
+{
+    public void ShowResult(string text) => ResultWindow.ShowResult(text);
 }

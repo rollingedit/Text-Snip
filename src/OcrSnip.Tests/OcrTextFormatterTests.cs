@@ -25,6 +25,14 @@ public sealed class OcrTextFormatterTests
         Assert.Equal($"  one  {Environment.NewLine}\ttwo", OcrTextFormatter.FormatLines(lines, OcrCopyMode.Code));
     }
 
+    [Fact]
+    public void FormatLines_DropsEmptyClipboardLines()
+    {
+        var lines = new[] { Line(" alpha ", 0, 0), Line("   ", 0, 20), Line("beta", 0, 40) };
+
+        Assert.Equal($"alpha{Environment.NewLine}beta", OcrTextFormatter.FormatLines(lines, OcrCopyMode.Raw));
+    }
+
     private static OcrLine Line(string text, float x, float y)
     {
         return new OcrLine(text, 1, new OcrQuadrilateral(
