@@ -1,0 +1,49 @@
+name: Windows CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-test-publish:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.301
+
+      - name: Restore
+        run: dotnet restore OcrSnip.slnx
+
+      - name: Verify models
+        shell: pwsh
+        run: ./tools/verify-models.ps1
+
+      - name: Build
+        run: dotnet build OcrSnip.slnx -c Release --no-restore
+
+      - name: Test
+        run: dotnet test OcrSnip.slnx -c Release --no-build
+
+      - name: Publish
+        shell: pwsh
+        run: ./tools/publish.ps1
+
+      - name: Upload portable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OcrSnip-Portable-x64
+          path: artifacts/publish/OcrSnip-Portable-x64.zip
+
+      - name: Upload checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: SHA256SUMS
+          path: artifacts/publish/SHA256SUMS.txt
