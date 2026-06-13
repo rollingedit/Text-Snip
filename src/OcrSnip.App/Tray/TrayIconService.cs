@@ -6,6 +6,7 @@ namespace OcrSnip.App.Tray;
 public sealed class TrayIconService : IDisposable
 {
     private readonly NotifyIcon _notifyIcon;
+    private readonly Icon? _icon;
 
     public TrayIconService(SnipWorkflow workflow, Action exit)
     {
@@ -15,9 +16,11 @@ public sealed class TrayIconService : IDisposable
         menu.Items.Add("About", null, (_, _) => MessageBox.Show("OCR Snip\nLocal CPU OCR snipping.", "OCR Snip"));
         menu.Items.Add("Exit", null, (_, _) => exit());
 
+        _icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath ?? Application.ExecutablePath);
+
         _notifyIcon = new NotifyIcon
         {
-            Icon = SystemIcons.Application,
+            Icon = _icon ?? SystemIcons.Application,
             Text = "OCR Snip",
             ContextMenuStrip = menu,
             Visible = false
@@ -31,5 +34,6 @@ public sealed class TrayIconService : IDisposable
     {
         _notifyIcon.Visible = false;
         _notifyIcon.Dispose();
+        _icon?.Dispose();
     }
 }

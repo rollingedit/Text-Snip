@@ -7,9 +7,26 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $setup = Join-Path $repoRoot "installer/Output/OcrSnip-Setup-x64.exe"
 $target = Join-Path $repoRoot $InstallDir
 
+function Assert-AssociatedIcon([string]$Path) {
+    Add-Type -AssemblyName System.Drawing
+    $icon = [System.Drawing.Icon]::ExtractAssociatedIcon($Path)
+    try {
+        if ($null -eq $icon) {
+            throw "No associated icon found for $Path"
+        }
+    }
+    finally {
+        if ($icon) {
+            $icon.Dispose()
+        }
+    }
+}
+
 if (!(Test-Path $setup)) {
     & (Join-Path $PSScriptRoot "build-installer.ps1")
 }
+
+Assert-AssociatedIcon $setup
 
 if (Test-Path $target) {
     Remove-Item $target -Recurse -Force
@@ -31,6 +48,7 @@ if ($install.ExitCode -ne 0) {
 
 $exe = Join-Path $target "OcrSnip.App.exe"
 $uninstaller = Join-Path $target "unins000.exe"
+Assert-AssociatedIcon $exe
 foreach ($path in @(
     $exe,
     $uninstaller,
