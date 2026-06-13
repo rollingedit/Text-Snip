@@ -196,11 +196,6 @@ function Invoke-AppSelfTests {
         Write-Warning "OCR self-test process exited successfully, but the runner did not observe expected clipboard text afterward. Continuing; desktop hotkey validation is the end-to-end clipboard gate when requested."
     }
 
-    $hotkey = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey" -Wait -PassThru
-    if ($hotkey.ExitCode -ne 0) {
-        Write-Warning "Internal hotkey self-test failed with exit code $($hotkey.ExitCode); continuing to external listener and desktop hotkey validation gates."
-    }
-
     Add-Type @"
 using System;
 using System.Runtime.InteropServices;
