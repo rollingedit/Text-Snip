@@ -26,7 +26,7 @@ Screenshots are captured in memory and not saved by Text Snip.
 * **Mobile-style OCR**: select what you see and copy it immediately.
 * **Local and private**: OCR runs on the machine with bundled models.
 * **Fast install**: one normal Windows installer, no zip workflow, no Python environment, no model download.
-* **Real OCR pipeline**: bundled [PP-OCRv6 small detector](https://github.com/rollingedit/Text-Snip/tree/main/assets/models/ppocrv6-small-det) and [PP-OCRv6 small recognizer](https://github.com/rollingedit/Text-Snip/tree/main/assets/models/ppocrv6-small-rec) ONNX models through [ONNX Runtime](https://github.com/microsoft/onnxruntime), with OpenCV/OpenCvSharp for image preprocessing and Clipper2 for OCR text-box geometry.
+* **Real OCR pipeline**: bundled [PP-OCRv6 small detector](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx) and [PP-OCRv6 small recognizer](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx) ONNX models through [ONNX Runtime](https://github.com/microsoft/onnxruntime), with OpenCV/OpenCvSharp for image preprocessing and Clipper2 for OCR text-box geometry.
 * **Repairable installer**: reinstalling replaces stale app files and shortcuts; optional reset clears Text Snip settings/logs.
 
 ## Latest Release
@@ -115,9 +115,9 @@ installer\Output\Text-Snip-Setup-x64.exe
 
 * Repository: https://github.com/rollingedit/Text-Snip
 * Latest release: https://github.com/rollingedit/Text-Snip/releases/latest
-* Bundled model directory: https://github.com/rollingedit/Text-Snip/tree/main/assets/models
-* PP-OCRv6 small detector bundle: https://github.com/rollingedit/Text-Snip/tree/main/assets/models/ppocrv6-small-det
-* PP-OCRv6 small recognizer bundle: https://github.com/rollingedit/Text-Snip/tree/main/assets/models/ppocrv6-small-rec
+* PaddleOCR: https://github.com/PaddlePaddle/PaddleOCR
+* PP-OCRv6 small detector ONNX model: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx
+* PP-OCRv6 small recognizer ONNX model: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
 * Installer sources: https://github.com/rollingedit/Text-Snip/tree/main/installer
 * Packaged license copies: https://github.com/rollingedit/Text-Snip/tree/main/installer/licenses
 * Third-party notices: https://github.com/rollingedit/Text-Snip/blob/main/THIRD_PARTY_NOTICES.md
@@ -132,8 +132,9 @@ Published builds include third-party license files under `licenses\`, and the re
 
 Bundled/runtime components include:
 
-* [PP-OCRv6 small detector ONNX model](https://github.com/rollingedit/Text-Snip/tree/main/assets/models/ppocrv6-small-det): Apache License 2.0
-* [PP-OCRv6 small recognizer ONNX model](https://github.com/rollingedit/Text-Snip/tree/main/assets/models/ppocrv6-small-rec): Apache License 2.0
+* [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR): Apache License 2.0
+* [PP-OCRv6 small detector ONNX model](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx): Apache License 2.0
+* [PP-OCRv6 small recognizer ONNX model](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx): Apache License 2.0
 * [ONNX Runtime](https://github.com/microsoft/onnxruntime): MIT
 * [OpenCvSharp](https://github.com/shimat/opencvsharp) / [OpenCV](https://github.com/opencv/opencv): Apache License 2.0 for the packages used here; used for image handling and preprocessing before OCR
 * [Clipper2](https://github.com/AngusJohnson/Clipper2): Boost Software License 1.0; used for polygon/text-box geometry during OCR post-processing

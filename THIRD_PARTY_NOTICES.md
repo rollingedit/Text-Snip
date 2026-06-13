@@ -6,6 +6,9 @@ OCR Snip bundles or references the following third-party components.
 
 - Detector: `PaddlePaddle/PP-OCRv6_small_det_onnx`
 - Recognizer: `PaddlePaddle/PP-OCRv6_small_rec_onnx`
+- PaddleOCR: https://github.com/PaddlePaddle/PaddleOCR
+- Detector source: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx
+- Recognizer source: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
 - License: Apache-2.0 as published by the model repositories.
 
 ## ONNX Runtime
