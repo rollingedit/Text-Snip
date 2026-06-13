@@ -103,6 +103,26 @@ public sealed class OcrTextFormatterTests
     }
 
     [Fact]
+    public void FormatLines_DoesNotSplitCodeOrFileIdentifiersAsNavigationText()
+    {
+        var lines = new[]
+        {
+            Line("OcrSnip.App.csproj", 10, 0, width: 160),
+            Line("PerMonitorV2 DPI", 10, 28, width: 145),
+            Line("Get-ChildItem -Force", 10, 56, width: 170),
+            Line("var totalCount = 42", 10, 84, width: 165)
+        };
+
+        Assert.Equal(
+            string.Join(Environment.NewLine,
+                "OcrSnip.App.csproj",
+                "PerMonitorV2 DPI",
+                "Get-ChildItem -Force",
+                "var totalCount = 42"),
+            OcrTextFormatter.FormatLines(lines, OcrCopyMode.Raw));
+    }
+
+    [Fact]
     public void FormatLines_MergesMixedHeightListRowAndIndentsSubtext()
     {
         var lines = new[]

@@ -1670,6 +1670,11 @@ public static class OcrTextFormatter
 
     private static string SplitPackedNavigationSegment(string text)
     {
+        if (LooksLikeIdentifierOrFileText(text))
+        {
+            return text;
+        }
+
         var letterCount = text.Count(char.IsLetter);
         if (letterCount < 10)
         {
@@ -1685,7 +1690,7 @@ public static class OcrTextFormatter
             }
         }
 
-        if (upperAfterLower < 1)
+        if (upperAfterLower < 2 && !text.Contains('.', StringComparison.Ordinal))
         {
             return text;
         }
@@ -1703,6 +1708,30 @@ public static class OcrTextFormatter
 
         parts.Add(text[start..]);
         return string.Join(" ", parts);
+    }
+
+    private static bool LooksLikeIdentifierOrFileText(string text)
+    {
+        var trimmed = text.Trim();
+        if (trimmed.Any(char.IsDigit)
+            || trimmed.Contains('-', StringComparison.Ordinal)
+            || trimmed.Contains('_', StringComparison.Ordinal)
+            || trimmed.Contains('=', StringComparison.Ordinal))
+        {
+            return true;
+        }
+
+        if (trimmed.Contains('.', StringComparison.Ordinal))
+        {
+            var lastDot = trimmed.LastIndexOf(".", StringComparison.Ordinal);
+            var extension = trimmed[(lastDot + 1)..];
+            return lastDot > 0
+                && extension.Length is >= 2 and <= 8
+                && extension.All(char.IsLetterOrDigit)
+                && trimmed[..lastDot].Any(char.IsLetter);
+        }
+
+        return false;
     }
 
     private static bool IsPackedWordBoundary(string text, int index)
