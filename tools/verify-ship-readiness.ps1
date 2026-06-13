@@ -34,42 +34,6 @@ function Assert-ValidEvidenceFile($Evidence) {
     }
 }
 
-function Get-CurrentMachineEvidence {
-    $compatibilityReport = Join-Path $repoRoot "artifacts/reports/compatibility-report.txt"
-    $signingReport = Join-Path $repoRoot "artifacts/reports/signing-status.txt"
-    $themeReport = Join-Path $repoRoot "artifacts/reports/theme-validation.txt"
-    $evidence = @{}
-    if (!(Test-Path $compatibilityReport)) {
-        return $evidence
-    }
-
-    $text = Get-Content $compatibilityReport -Raw
-    if ($text -match "Elevated administrator: False") {
-        $evidence["standardAccount"] = "compatibility-report.txt shows non-elevated standard-account execution"
-    }
-
-    if ($text -match "App light theme: 0" -and $text -match "System light theme: 0") {
-        $evidence["darkTheme"] = "compatibility-report.txt shows dark app/system theme registry values"
-    }
-
-    if (Test-Path $themeReport) {
-        $themeText = Get-Content $themeReport -Raw
-        if ($themeText -match "light: passed") {
-            $evidence["lightTheme"] = "theme-validation.txt shows app, conflict, and hotkey snip checks passed in light mode"
-        }
-
-        if ($themeText -match "dark: passed") {
-            $evidence["darkTheme"] = "theme-validation.txt shows app, conflict, and hotkey snip checks passed in dark mode"
-        }
-    }
-
-    if ($text -match "CPU vendor/name: GenuineIntel" -and (Test-Path $signingReport)) {
-        $evidence["intelModelLoad"] = "release verification completed model and OCR fixture checks on an Intel x64 CPU"
-    }
-
-    return $evidence
-}
-
 function New-Template {
     $template = [ordered]@{}
     foreach ($gate in $requiredExternalGates) {
@@ -106,14 +70,9 @@ if (!(Test-Path $evidenceFile)) {
 
 $evidence = Get-Content $evidenceFile -Raw | ConvertFrom-Json
 Assert-ValidEvidenceFile $evidence
-$currentMachineEvidence = Get-CurrentMachineEvidence
 $missing = @()
 foreach ($gate in $requiredExternalGates) {
     $entry = $evidence.$gate
-    if ($currentMachineEvidence.ContainsKey($gate)) {
-        continue
-    }
-
     if ($null -eq $entry -or $entry.passed -ne $true -or [string]::IsNullOrWhiteSpace($entry.evidence)) {
         $missing += $gate
     }

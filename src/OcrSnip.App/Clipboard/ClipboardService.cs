@@ -14,12 +14,17 @@ public static class ClipboardService
         Exception? lastError = null;
         for (var attempt = 0; attempt < 10; attempt++)
         {
-            if (TrySetUnicodeTextNative(text, out error))
+            var previousText = TryReadExistingText();
+            if (TrySetUnicodeTextNative(text, out error, out var clipboardChanged))
             {
                 return true;
             }
 
             lastError = error;
+            if (clipboardChanged && previousText is not null)
+            {
+                TrySetUnicodeTextNative(previousText, out _, out _);
+            }
 
             try
             {
@@ -40,10 +45,25 @@ public static class ClipboardService
         return false;
     }
 
-    private static bool TrySetUnicodeTextNative(string text, out Exception? error)
+    private static string? TryReadExistingText()
+    {
+        try
+        {
+            return System.Windows.Clipboard.ContainsText(System.Windows.TextDataFormat.UnicodeText)
+                ? System.Windows.Clipboard.GetText(System.Windows.TextDataFormat.UnicodeText)
+                : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static bool TrySetUnicodeTextNative(string text, out Exception? error, out bool clipboardChanged)
     {
         nint handle = 0;
         nint locked = 0;
+        clipboardChanged = false;
         try
         {
             var bytes = Encoding.Unicode.GetBytes(text + '\0');
@@ -79,6 +99,7 @@ public static class ClipboardService
                     return false;
                 }
 
+                clipboardChanged = true;
                 if (NativeMethods.SetClipboardData(NativeMethods.CfUnicodeText, handle) == 0)
                 {
                     error = new InvalidOperationException("SetClipboardData failed.");
