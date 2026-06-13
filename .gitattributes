@@ -1,0 +1,2 @@
+assets/models/**/*.onnx binary
+assets/models/**/*.yml text eol=lf
