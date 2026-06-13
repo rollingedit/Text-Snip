@@ -44,11 +44,21 @@ jobs:
         shell: pwsh
         run: ./tools/publish.ps1
 
+      - name: Create external validation kit
+        shell: pwsh
+        run: ./tools/create-external-validation-kit.ps1
+
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
           name: OcrSnip-Portable-x64
           path: artifacts/publish/OcrSnip-Portable-x64.zip
+
+      - name: Upload external validation kit
+        uses: actions/upload-artifact@v4
+        with:
+          name: OcrSnip-ExternalValidationKit
+          path: artifacts/publish/OcrSnip-ExternalValidationKit.zip
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4

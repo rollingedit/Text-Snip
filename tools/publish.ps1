@@ -6,6 +6,9 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
+if (!(Test-Path $dotnet)) {
+    $dotnet = "dotnet"
+}
 
 & (Join-Path $PSScriptRoot "verify-models.ps1")
 $publishDir = Join-Path $repoRoot $OutputPath
