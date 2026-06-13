@@ -407,8 +407,14 @@ Add-Type -AssemblyName System.Drawing
         } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
 
         if ($AllowFixedSelectionFallback -and !$UseExistingApp) {
-            if ($app -and !$app.HasExited) {
-                Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+            Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+            $stopDeadline = (Get-Date).AddSeconds(5)
+            do {
+                Start-Sleep -Milliseconds 250
+                $remainingApp = Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Select-Object -First 1
+            } while ($remainingApp -and (Get-Date) -lt $stopDeadline)
+            if ($remainingApp) {
+                throw "Could not stop the previous OcrSnip.App instance before fixed-selection hotkey validation."
             }
 
             Set-Clipboard -Value "__OCR_SNIP_PENDING__"

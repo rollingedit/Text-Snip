@@ -97,13 +97,18 @@ file static class SelfTestCommand
 {
     public static bool TryRun(string[] args, Action shutdown)
     {
-        if (args.Length == 0)
+        if (args.Length == 0 || !IsSelfTestCommand(args[0]))
         {
             return false;
         }
 
         _ = RunAsync(args, shutdown);
         return true;
+    }
+
+    private static bool IsSelfTestCommand(string command)
+    {
+        return command is "--self-test-ocr" or "--self-test-startup" or "--self-test-hotkey" or "--self-test-hotkey-listener";
     }
 
     private static async Task RunAsync(string[] args, Action shutdown)
