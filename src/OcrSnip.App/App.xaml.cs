@@ -167,7 +167,7 @@ file static class SelfTestCommand
 
     private static bool IsSelfTestCommand(string command)
     {
-        return command is "--self-test-ocr" or "--self-test-startup" or "--self-test-hotkey" or "--self-test-hotkey-listener" or "--self-test-fixed-selection";
+        return command is "--self-test-ocr" or "--self-test-startup" or "--self-test-hotkey" or "--self-test-hotkey-listener" or "--self-test-fixed-selection" or "--self-test-rendered-selection";
     }
 
     private static async Task RunAsync(string[] args, Action shutdown)
@@ -190,6 +190,9 @@ file static class SelfTestCommand
                     break;
                 case "--self-test-fixed-selection":
                     await RunFixedSelectionTestAsync(args).ConfigureAwait(true);
+                    break;
+                case "--self-test-rendered-selection":
+                    await RunRenderedSelectionTestAsync().ConfigureAwait(true);
                     break;
             }
         }
@@ -256,6 +259,81 @@ file static class SelfTestCommand
         }
 
         Environment.ExitCode = ClipboardService.TrySetText(result.Text, out _) ? 0 : 4;
+    }
+
+    private static async Task RunRenderedSelectionTestAsync()
+    {
+        const string expectedText = "OCR TEST";
+        var window = CreateRenderedSelectionTarget(expectedText);
+        try
+        {
+            window.Show();
+            window.Activate();
+            window.UpdateLayout();
+            await Task.Delay(TimeSpan.FromMilliseconds(500)).ConfigureAwait(true);
+
+            var topLeft = window.PointToScreen(new System.Windows.Point(0, 0));
+            var bottomRight = window.PointToScreen(new System.Windows.Point(window.ActualWidth, window.ActualHeight));
+            var rectangle = new Int32Rect(
+                (int)Math.Floor(topLeft.X),
+                (int)Math.Floor(topLeft.Y),
+                Math.Max(1, (int)Math.Ceiling(bottomRight.X - topLeft.X)),
+                Math.Max(1, (int)Math.Ceiling(bottomRight.Y - topLeft.Y)));
+
+            using var engine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
+            var bitmap = await ScreenCapture.CaptureAsync(rectangle).ConfigureAwait(true);
+            var result = await engine.RecognizeAsync(bitmap, CancellationToken.None).ConfigureAwait(true);
+            if (string.IsNullOrWhiteSpace(result.Text))
+            {
+                Environment.ExitCode = 15;
+                return;
+            }
+
+            if (!result.Text.Contains(expectedText, StringComparison.OrdinalIgnoreCase))
+            {
+                Environment.ExitCode = 16;
+                return;
+            }
+
+            Environment.ExitCode = ClipboardService.TrySetText(result.Text, out _) ? 0 : 4;
+        }
+        finally
+        {
+            window.Close();
+        }
+    }
+
+    private static Window CreateRenderedSelectionTarget(string text)
+    {
+        return new Window
+        {
+            Title = "OCR Snip Self Test Target",
+            Width = 720,
+            Height = 220,
+            Left = SystemParameters.VirtualScreenLeft + 80,
+            Top = SystemParameters.VirtualScreenTop + 80,
+            WindowStartupLocation = WindowStartupLocation.Manual,
+            WindowStyle = WindowStyle.None,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            Topmost = true,
+            Background = System.Windows.Media.Brushes.White,
+            Content = new System.Windows.Controls.Border
+            {
+                Background = System.Windows.Media.Brushes.White,
+                Padding = new Thickness(36),
+                Child = new System.Windows.Controls.TextBlock
+                {
+                    Text = text,
+                    FontFamily = new System.Windows.Media.FontFamily("Arial"),
+                    FontSize = 64,
+                    FontWeight = FontWeights.Bold,
+                    Foreground = System.Windows.Media.Brushes.Black,
+                    HorizontalAlignment = System.Windows.HorizontalAlignment.Center,
+                    VerticalAlignment = VerticalAlignment.Center
+                }
+            }
+        };
     }
 
     private static void RunStartupTest()

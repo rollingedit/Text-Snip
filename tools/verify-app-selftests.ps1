@@ -43,4 +43,13 @@ if (!(Wait-ClipboardContains "OCR TEST")) {
     throw "OCR clipboard self-test did not place expected text on clipboard."
 }
 
+$rendered = Start-Process -FilePath $exe -ArgumentList "--self-test-rendered-selection" -Wait -PassThru
+if ($rendered.ExitCode -ne 0) {
+    throw "Rendered screen-capture OCR self-test failed with exit code $($rendered.ExitCode)"
+}
+
+if (!(Wait-ClipboardContains "OCR TEST")) {
+    throw "Rendered screen-capture OCR self-test did not place expected text on clipboard."
+}
+
 Write-Host "App self-tests passed."
