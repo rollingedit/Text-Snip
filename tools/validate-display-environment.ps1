@@ -3,12 +3,14 @@ param(
     [int]$ExpectedDpiScale,
     [switch]$RequireMixedDpi,
     [switch]$RequireNegativeVirtualMonitor,
-    [switch]$MultiMonitorCapturePassed
+    [switch]$MultiMonitorCapturePassed,
+    [switch]$AllowHostInputAutomation
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $compatibilityReport = Join-Path $repoRoot "artifacts/reports/compatibility-report.txt"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
 
 & (Join-Path $PSScriptRoot "collect-compatibility-report.ps1") | Out-Null
 $report = Get-Content $compatibilityReport -Raw
@@ -32,6 +34,7 @@ if ($MultiMonitorCapturePassed) {
     }
 }
 
-& (Join-Path $PSScriptRoot "verify-monitor-capture.ps1") -RequireMultipleMonitors:$MultiMonitorCapturePassed | Out-Null
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "validate-display-environment.ps1 runs monitor capture validation that moves the real cursor and sends the app hotkey."
+& (Join-Path $PSScriptRoot "verify-monitor-capture.ps1") -RequireMultipleMonitors:$MultiMonitorCapturePassed -AllowHostInputAutomation:$AllowHostInputAutomation | Out-Null
 & (Join-Path $PSScriptRoot "record-external-validation.ps1") -MultiMonitorCapturePassed:$MultiMonitorCapturePassed | Out-Null
 Write-Host "Display environment validation passed."

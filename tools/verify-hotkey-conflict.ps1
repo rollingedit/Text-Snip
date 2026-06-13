@@ -1,11 +1,14 @@
 param(
-    [string]$PublishRoot = "artifacts/publish/OcrSnip"
+    [string]$PublishRoot = "artifacts/publish/OcrSnip",
+    [switch]$AllowHostInputAutomation
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $publishRoot = Join-Path $repoRoot $PublishRoot
 $exe = Join-Path $publishRoot "OcrSnip.App.exe"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-hotkey-conflict.ps1 reserves a real global desktop hotkey and launches OCR Snip to verify conflict behavior."
 
 if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")

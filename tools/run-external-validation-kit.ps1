@@ -13,6 +13,7 @@ param(
     [switch]$IncludeDesktopHotkey,
     [switch]$IncludeHotkeyConflict,
     [switch]$AllowFixedSelectionFallback,
+    [switch]$AllowHostInputAutomation,
     [switch]$PreparePostRebootValidation,
     [switch]$CompletePostRebootValidation,
     [switch]$PostRebootHotkeyPassed,
@@ -27,6 +28,8 @@ $appRoot = Join-Path $kitRoot "OcrSnip"
 $exe = Join-Path $appRoot "OcrSnip.App.exe"
 $fixture = Join-Path $kitRoot "Fixtures/simple_text.png"
 $gateManifest = Join-Path $PSScriptRoot "validation-gates.json"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
+$script:HostInputAutomationUnlocked = Test-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation)
 
 function Resolve-OutputDirectory([string]$Root) {
     if ([System.IO.Path]::IsPathRooted($Root)) {
@@ -194,6 +197,11 @@ function Invoke-AppSelfTests {
     $script:appSelfTestClipboardObserved = Wait-ClipboardContains "OCR TEST"
     if (!$script:appSelfTestClipboardObserved) {
         Write-Warning "OCR self-test process exited successfully, but the runner did not observe expected clipboard text afterward. Continuing; desktop hotkey validation is the end-to-end clipboard gate when requested."
+    }
+
+    if (!$script:HostInputAutomationUnlocked) {
+        Write-Warning "Skipping hotkey listener self-test because host input automation is locked. Pass -AllowHostInputAutomation or set OCRSNIP_ALLOW_HOST_INPUT_AUTOMATION=1 inside a disposable VM to enable it."
+        return
     }
 
     Add-Type @"
@@ -631,6 +639,7 @@ $desktopHotkeyPassed = $false
 $hotkeyConflictPassed = $false
 
 if ($PreparePostRebootValidation) {
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Post-reboot validation enables launch-at-login and later sends a desktop hotkey."
     Enable-LaunchAtLogin
     Register-PostRebootTask
     Write-Host "Prepared post-reboot validation. Reboot, sign in, and wait for the one-time validation task to run."
@@ -638,6 +647,7 @@ if ($PreparePostRebootValidation) {
 }
 
 if ($CompletePostRebootValidation) {
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Post-reboot completion sends Ctrl+Shift+O and drags on the active desktop."
     Complete-PostRebootValidation
     $PostRebootHotkeyPassed = $true
     $desktopHotkeyPassed = $true
@@ -649,11 +659,13 @@ Test-IdleNoNetwork
 $idleNoNetworkPassed = $true
 
 if ($IncludeDesktopHotkey) {
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Desktop hotkey validation sends Ctrl+Shift+O, moves the mouse, drags a selection, and reads the clipboard."
     Test-DesktopHotkey
     $desktopHotkeyPassed = $true
 }
 
 if ($IncludeHotkeyConflict) {
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Hotkey conflict validation reserves a real global desktop hotkey and launches the app."
     Test-HotkeyConflict
     $hotkeyConflictPassed = $true
 }

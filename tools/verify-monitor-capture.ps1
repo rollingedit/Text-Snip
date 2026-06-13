@@ -1,11 +1,14 @@
 param(
     [switch]$RequireMultipleMonitors,
-    [int]$TimeoutSeconds = 15
+    [int]$TimeoutSeconds = 15,
+    [switch]$AllowHostInputAutomation
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $exe = Join-Path $repoRoot "artifacts/publish/OcrSnip/OcrSnip.App.exe"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-monitor-capture.ps1 sends Ctrl+Shift+O, moves the real cursor, drags selections, and reads the clipboard across monitors."
 
 if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")

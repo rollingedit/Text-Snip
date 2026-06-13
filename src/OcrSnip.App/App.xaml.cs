@@ -15,10 +15,13 @@ namespace OcrSnip.App;
 public partial class App : System.Windows.Application
 {
     private Mutex? _mutex;
+    private EventWaitHandle? _showWindowEvent;
+    private RegisteredWaitHandle? _showWindowRegistration;
     private TrayIconService? _trayIcon;
     private HotkeyService? _hotkeyService;
     private SnipWorkflow? _workflow;
     private OcrEngine? _ocrEngine;
+    private AppSettings? _settings;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -33,14 +36,30 @@ public partial class App : System.Windows.Application
         _mutex = new Mutex(true, "Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_Resident", out var createdNew);
         if (!createdNew)
         {
+            SignalExistingInstance();
             Shutdown();
             return;
         }
 
+        _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_ShowWindow");
+        _showWindowRegistration = ThreadPool.RegisterWaitForSingleObject(
+            _showWindowEvent,
+            (_, _) => Dispatcher.Invoke(ShowStatusWindow),
+            null,
+            Timeout.InfiniteTimeSpan,
+            executeOnlyOnce: false);
+
         ShutdownMode = ShutdownMode.OnExplicitShutdown;
 
         var settingsStore = new SettingsStore();
+        var isFirstRun = !settingsStore.Exists;
         var settings = settingsStore.Load();
+        _settings = settings;
+        if (isFirstRun)
+        {
+            settingsStore.Save(settings);
+        }
+
         StartupRegistration.Apply(settings.LaunchAtLogin);
         _ocrEngine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
         _workflow = new SnipWorkflow(settingsStore, settings, _ocrEngine, ValidationSelection.TryParse(e.Args));
@@ -52,6 +71,10 @@ public partial class App : System.Windows.Application
         {
             _workflow.ShowHotkeyConflict();
         }
+        else if (!e.Args.Contains("--tray", StringComparer.OrdinalIgnoreCase))
+        {
+            ShowStatusWindow();
+        }
     }
 
     protected override void OnExit(ExitEventArgs e)
@@ -59,8 +82,50 @@ public partial class App : System.Windows.Application
         _trayIcon?.Dispose();
         _hotkeyService?.Dispose();
         _ocrEngine?.Dispose();
+        _showWindowRegistration?.Unregister(null);
+        _showWindowEvent?.Dispose();
         _mutex?.Dispose();
         base.OnExit(e);
+    }
+
+    private void ShowStatusWindow()
+    {
+        if (_workflow is null || _settings is null)
+        {
+            return;
+        }
+
+        foreach (Window window in Windows)
+        {
+            if (window is OnboardingWindow)
+            {
+                window.Show();
+                window.Activate();
+                return;
+            }
+        }
+
+        var onboarding = new OnboardingWindow(
+            _settings,
+            () => _ = _workflow.StartSnipAsync(),
+            _workflow.ShowSettings);
+        onboarding.Show();
+        onboarding.Activate();
+    }
+
+    private static void SignalExistingInstance()
+    {
+        try
+        {
+            using var existing = EventWaitHandle.OpenExisting("Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_ShowWindow");
+            existing.Set();
+        }
+        catch (WaitHandleCannotBeOpenedException)
+        {
+        }
+        catch (UnauthorizedAccessException)
+        {
+        }
     }
 }
 

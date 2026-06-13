@@ -1,11 +1,14 @@
 param(
     [string]$ExpectedText = "OCR TEST",
-    [int]$TimeoutSeconds = 15
+    [int]$TimeoutSeconds = 15,
+    [switch]$AllowHostInputAutomation
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $exe = Join-Path $repoRoot "artifacts/publish/OcrSnip/OcrSnip.App.exe"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-hotkey-snip.ps1 starts OCR Snip, sends Ctrl+Shift+O, moves the mouse, drags a desktop selection, and reads the clipboard."
 
 if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")

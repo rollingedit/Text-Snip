@@ -1,11 +1,14 @@
 param(
-    [string]$OutputPath = "artifacts/reports/theme-validation.txt"
+    [string]$OutputPath = "artifacts/reports/theme-validation.txt",
+    [switch]$AllowHostInputAutomation
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $output = Join-Path $repoRoot $OutputPath
 $themePath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Themes\Personalize"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-theme-modes.ps1 changes Windows theme values and runs desktop hotkey snip checks in light and dark mode."
 New-Item -ItemType Directory -Force -Path (Split-Path $output -Parent) | Out-Null
 
 Add-Type -TypeDefinition @"
@@ -70,8 +73,8 @@ try {
     )) {
         Set-ThemeMode $mode.Value
         & (Join-Path $PSScriptRoot "verify-app-selftests.ps1") | Out-Null
-        & (Join-Path $PSScriptRoot "verify-hotkey-conflict.ps1") | Out-Null
-        & (Join-Path $PSScriptRoot "verify-hotkey-snip.ps1") | Out-Null
+        & (Join-Path $PSScriptRoot "verify-hotkey-conflict.ps1") -AllowHostInputAutomation:$AllowHostInputAutomation | Out-Null
+        & (Join-Path $PSScriptRoot "verify-hotkey-snip.ps1") -AllowHostInputAutomation:$AllowHostInputAutomation | Out-Null
         $lines += "$($mode.Name): passed"
     }
 }

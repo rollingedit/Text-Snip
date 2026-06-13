@@ -2,7 +2,8 @@ param(
     [string]$Configuration = "Release",
     [switch]$IncludeDesktopHotkey,
     [switch]$IncludeHotkeyConflict,
-    [switch]$IncludeThemeModes
+    [switch]$IncludeThemeModes,
+    [switch]$AllowHostInputAutomation
 )
 
 $ErrorActionPreference = "Stop"
@@ -10,6 +11,11 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
 $publishDir = Join-Path $repoRoot "artifacts/publish/OcrSnip"
 $zipPath = Join-Path $repoRoot "artifacts/publish/OcrSnip-Portable-x64.zip"
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
+
+if ($IncludeDesktopHotkey -or $IncludeHotkeyConflict -or $IncludeThemeModes) {
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-release.ps1 was asked to run desktop/global-hotkey validation."
+}
 
 function Assert-Exists([string]$Path) {
     if (!(Test-Path $Path)) {
@@ -53,15 +59,15 @@ Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "asset
 & (Join-Path $PSScriptRoot "collect-compatibility-report.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-validation-tooling.ps1") | Out-Null
 if ($IncludeDesktopHotkey) {
-    & (Join-Path $PSScriptRoot "verify-hotkey-snip.ps1") | Out-Null
+    & (Join-Path $PSScriptRoot "verify-hotkey-snip.ps1") -AllowHostInputAutomation:$AllowHostInputAutomation | Out-Null
 }
 
 if ($IncludeHotkeyConflict) {
-    & (Join-Path $PSScriptRoot "verify-hotkey-conflict.ps1") | Out-Null
+    & (Join-Path $PSScriptRoot "verify-hotkey-conflict.ps1") -AllowHostInputAutomation:$AllowHostInputAutomation | Out-Null
 }
 
 if ($IncludeThemeModes) {
-    & (Join-Path $PSScriptRoot "verify-theme-modes.ps1") | Out-Null
+    & (Join-Path $PSScriptRoot "verify-theme-modes.ps1") -AllowHostInputAutomation:$AllowHostInputAutomation | Out-Null
 }
 
 Assert-Exists (Join-Path $publishDir "OcrSnip.App.exe")

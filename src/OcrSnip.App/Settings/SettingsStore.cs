@@ -17,6 +17,8 @@ public sealed class SettingsStore
 
     public string SettingsPath { get; }
 
+    public bool Exists => File.Exists(SettingsPath);
+
     public AppSettings Load()
     {
         if (!File.Exists(SettingsPath))

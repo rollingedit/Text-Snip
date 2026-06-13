@@ -1,12 +1,14 @@
 param(
     [string]$EvidencePath = "artifacts/reports/external-validation.json",
     [switch]$RunAutomatedChecks,
+    [switch]$AllowHostInputAutomation,
     [switch]$CreateTemplate
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $evidenceFile = Join-Path $repoRoot $EvidencePath
+. (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
 
 $requiredExternalGates = @((Get-Content (Join-Path $PSScriptRoot "validation-gates.json") -Raw | ConvertFrom-Json).id)
 
@@ -88,7 +90,8 @@ if ($CreateTemplate -and !(Test-Path $evidenceFile)) {
 }
 
 if ($RunAutomatedChecks) {
-    & (Join-Path $PSScriptRoot "verify-release.ps1") -IncludeDesktopHotkey -IncludeHotkeyConflict -IncludeThemeModes
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-ship-readiness.ps1 -RunAutomatedChecks runs release hotkey, hotkey-conflict, and theme validations."
+    & (Join-Path $PSScriptRoot "verify-release.ps1") -IncludeDesktopHotkey -IncludeHotkeyConflict -IncludeThemeModes -AllowHostInputAutomation:$AllowHostInputAutomation
     & (Join-Path $PSScriptRoot "run-ocr-fixtures.ps1")
     & (Join-Path $PSScriptRoot "compare-paddle-reference.ps1")
     & (Join-Path $PSScriptRoot "verify-privacy.ps1")
