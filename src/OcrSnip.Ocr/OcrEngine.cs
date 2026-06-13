@@ -25,16 +25,19 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
     {
         ArgumentNullException.ThrowIfNull(crop);
         cancellationToken.ThrowIfCancellationRequested();
-        EnsureLoaded();
+        lock (_lock)
+        {
+            EnsureLoaded();
 
-        using var source = OcrImageOperations.BitmapSourceToBgrMat(crop);
-        var lines = Options.SmallTextBoost == SmallTextBoostMode.Auto
-            ? RecognizeAuto(source, cancellationToken)
-            : RecognizeScaled(source, Options.SmallTextBoost, cancellationToken);
+            using var source = OcrImageOperations.BitmapSourceToBgrMat(crop);
+            var lines = Options.SmallTextBoost == SmallTextBoostMode.Auto
+                ? RecognizeAuto(source, cancellationToken)
+                : RecognizeScaled(source, Options.SmallTextBoost, cancellationToken);
 
-        var ordered = OcrTextFormatter.SortLines(lines);
-        var diagnostics = OcrDiagnosticsAnalyzer.Analyze(source.Width, source.Height, ordered);
-        return Task.FromResult(new OcrResult(OcrTextFormatter.FormatLines(ordered, Options.CopyMode), ordered, diagnostics));
+            var ordered = OcrTextFormatter.SortLines(lines);
+            var diagnostics = OcrDiagnosticsAnalyzer.Analyze(source.Width, source.Height, ordered);
+            return Task.FromResult(new OcrResult(OcrTextFormatter.FormatLines(ordered, Options.CopyMode), ordered, diagnostics));
+        }
     }
 
     public void Unload()

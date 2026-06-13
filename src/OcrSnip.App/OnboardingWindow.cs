@@ -9,7 +9,7 @@ public sealed class OnboardingWindow : Window
 {
     public OnboardingWindow(AppSettings settings, Func<Task> startSnip, Action showSettings)
     {
-        Title = "OCR Snip";
+        Title = "Text Snip";
         Width = 420;
         Height = 300;
         ResizeMode = ResizeMode.NoResize;
@@ -26,7 +26,7 @@ public sealed class OnboardingWindow : Window
 
         var title = new TextBlock
         {
-            Text = "OCR Snip is running",
+            Text = "Text Snip is running",
             FontSize = 20,
             FontWeight = FontWeights.SemiBold,
             Margin = new Thickness(0, 0, 0, 10)
@@ -36,7 +36,7 @@ public sealed class OnboardingWindow : Window
 
         var body = new TextBlock
         {
-            Text = "Drag over text and release. OCR Snip copies recognized text to the clipboard.",
+            Text = "Drag over text and release. Text Snip copies recognized text to the clipboard.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = System.Windows.Media.Brushes.DimGray,
             Margin = new Thickness(0, 0, 0, 12)
@@ -63,7 +63,7 @@ public sealed class OnboardingWindow : Window
 
         var status = new TextBlock
         {
-            Text = "The tray icon stays available for Start snip, Settings, and Exit. To pin OCR Snip, right-click this taskbar icon while this window is open.",
+            Text = "The tray icon stays available for Start snip, Settings, and Exit. To pin Text Snip, right-click this taskbar icon while this window is open.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = System.Windows.Media.Brushes.DimGray
         };
@@ -91,7 +91,7 @@ public sealed class OnboardingWindow : Window
                 AppDiagnostics.LogException("Onboarding Start snip failed.", ex);
                 Show();
                 Activate();
-                System.Windows.MessageBox.Show(OcrFailureDiagnostics.Format(ex), "OCR Snip failed to start", MessageBoxButton.OK, MessageBoxImage.Error);
+                System.Windows.MessageBox.Show(OcrFailureDiagnostics.Format(ex), "Text Snip failed to start", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         };
         buttons.Children.Add(start);

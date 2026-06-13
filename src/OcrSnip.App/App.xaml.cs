@@ -24,6 +24,17 @@ public partial class App : System.Windows.Application
         DpiAwareness.TryEnablePerMonitorV2();
         base.OnStartup(e);
 
+        if (e.Args.Contains("--doctor", StringComparer.OrdinalIgnoreCase))
+        {
+            System.Windows.MessageBox.Show(
+                AppDoctor.BuildReport(AppContext.BaseDirectory),
+                "Text Snip Doctor",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            Shutdown();
+            return;
+        }
+
         _mutex = new Mutex(true, SingleInstanceActivation.ResidentMutexName, out var createdNew);
         if (!createdNew)
         {
@@ -45,6 +56,11 @@ public partial class App : System.Windows.Application
         var settingsStore = new SettingsStore();
         var isFirstRun = !settingsStore.Exists;
         var settings = settingsStore.Load();
+        if (isFirstRun)
+        {
+            settings.LaunchAtLogin = StartupRegistration.IsRegistered(Environment.ProcessPath);
+        }
+
         _settings = settings;
         if (isFirstRun)
         {
@@ -53,7 +69,7 @@ public partial class App : System.Windows.Application
 
         StartupRegistration.Apply(settings.LaunchAtLogin);
         _ocrEngine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
-        _workflow = new SnipWorkflow(settingsStore, settings, _ocrEngine);
+        _workflow = new SnipWorkflow(settingsStore, settings, _ocrEngine, applyHotkey: ReconfigureHotkey);
         _hotkeyService = new HotkeyService(settings.Hotkey, () => _ = _workflow.StartSnipAsync());
         _trayIcon = new TrayIconService(_workflow, () => Shutdown());
         _trayIcon.Show();
@@ -104,6 +120,24 @@ public partial class App : System.Windows.Application
         onboarding.Activate();
     }
 
+    private bool ReconfigureHotkey(HotkeyDefinition definition)
+    {
+        if (_workflow is null)
+        {
+            return false;
+        }
+
+        var replacement = new HotkeyService(definition, () => _ = _workflow.StartSnipAsync());
+        if (!replacement.TryRegister())
+        {
+            replacement.Dispose();
+            return false;
+        }
+
+        _hotkeyService?.Dispose();
+        _hotkeyService = replacement;
+        return true;
+    }
 }
 
 file static class DpiAwareness

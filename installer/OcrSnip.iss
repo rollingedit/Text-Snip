@@ -12,8 +12,8 @@ AppVersion={#MyAppVersion}
 DefaultDirName={autopf}\Text Snip
 DefaultGroupName={#MyAppName}
 OutputBaseFilename=Text-Snip-Setup-x64
-ArchitecturesAllowed=x64
-ArchitecturesInstallIn64BitMode=x64
+ArchitecturesAllowed=x64compatible
+ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
@@ -36,10 +36,9 @@ Name: "{autodesktop}\Text Snip"; Filename: "{app}\{#MyAppExeName}"; Tasks: deskt
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "OcrSnip"; Flags: deletevalue
-Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OcrSnip"; ValueData: """{app}\{#MyAppExeName}"" --tray"; Tasks: launchatlogin
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OcrSnip"; ValueData: """{app}\{#MyAppExeName}"" --tray"; Tasks: launchatlogin; Flags: uninsdeletevalue
 
 [InstallDelete]
-Type: filesandordirs; Name: "{app}\*"
 Type: files; Name: "{autodesktop}\OCR Snip.lnk"
 Type: files; Name: "{group}\OCR Snip.lnk"
 Type: files; Name: "{autodesktop}\Text Snip.lnk"
@@ -49,10 +48,7 @@ Type: filesandordirs; Name: "{localappdata}\OcrSnip\logs"; Tasks: resetuserdata
 
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Check: NeedsVCRedist
-Filename: "{app}\{#MyAppExeName}"; Description: "Launch OCR Snip"; Flags: nowait postinstall skipifsilent
-
-[UninstallDelete]
-Type: filesandordirs; Name: "{app}"
+Filename: "{app}\{#MyAppExeName}"; Description: "Launch Text Snip"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function NeedsVCRedist(): Boolean;
@@ -70,6 +66,12 @@ function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   ResultCode: Integer;
 begin
+  if NeedsVCRedist and not IsAdminInstallMode then
+  begin
+    Result := 'Text Snip needs the Microsoft Visual C++ Runtime. Run this installer as administrator or install the x64 Visual C++ Runtime first.';
+    Exit;
+  end;
+
   Exec('taskkill.exe', '/IM {#MyAppExeName} /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   Result := '';
 end;

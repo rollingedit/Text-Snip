@@ -13,7 +13,7 @@ public sealed class TrayIconService : IDisposable
         var menu = new ContextMenuStrip();
         menu.Items.Add("Start snip", null, (_, _) => _ = workflow.StartSnipAsync());
         menu.Items.Add("Settings", null, (_, _) => workflow.ShowSettings());
-        menu.Items.Add("About", null, (_, _) => MessageBox.Show("OCR Snip\nLocal CPU OCR snipping.", "OCR Snip"));
+        menu.Items.Add("About", null, (_, _) => MessageBox.Show("Text Snip\nLocal CPU OCR snipping.", "Text Snip"));
         menu.Items.Add("Exit", null, (_, _) => exit());
 
         _icon = Icon.ExtractAssociatedIcon(Environment.ProcessPath ?? Application.ExecutablePath);
@@ -21,7 +21,7 @@ public sealed class TrayIconService : IDisposable
         _notifyIcon = new NotifyIcon
         {
             Icon = _icon ?? SystemIcons.Application,
-            Text = "OCR Snip",
+            Text = "Text Snip",
             ContextMenuStrip = menu,
             Visible = false
         };

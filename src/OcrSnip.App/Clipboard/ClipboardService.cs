@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Interop;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -6,6 +7,8 @@ namespace OcrSnip.App.Clipboard;
 
 public static class ClipboardService
 {
+    private static readonly Lazy<HwndSource> ClipboardOwner = new(CreateClipboardOwner);
+
     public static bool TrySetText(string text, out Exception? error)
     {
         Exception? lastError = null;
@@ -62,7 +65,7 @@ public static class ClipboardService
             NativeMethods.GlobalUnlock(handle);
             locked = 0;
 
-            if (!NativeMethods.OpenClipboard(0))
+            if (!NativeMethods.OpenClipboard(ClipboardOwner.Value.Handle))
             {
                 error = new InvalidOperationException("OpenClipboard failed.");
                 return false;
@@ -108,6 +111,17 @@ public static class ClipboardService
                 NativeMethods.GlobalFree(handle);
             }
         }
+    }
+
+    private static HwndSource CreateClipboardOwner()
+    {
+        var parameters = new HwndSourceParameters("TextSnipClipboardOwner")
+        {
+            Width = 0,
+            Height = 0,
+            WindowStyle = unchecked((int)0x80000000)
+        };
+        return new HwndSource(parameters);
     }
 }
 

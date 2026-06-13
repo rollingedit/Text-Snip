@@ -19,10 +19,11 @@ public sealed class SnipWorkflow
     private readonly IClipboardWriter _clipboard;
     private readonly IToastService _toast;
     private readonly IResultPresenter _resultPresenter;
+    private readonly Func<HotkeyDefinition, bool>? _applyHotkey;
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly System.Threading.Timer _unloadTimer;
 
-    public SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine, ISnipSelectionService? selection = null)
+    public SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine, ISnipSelectionService? selection = null, Func<HotkeyDefinition, bool>? applyHotkey = null)
         : this(
             settingsStore,
             settings,
@@ -31,7 +32,8 @@ public sealed class SnipWorkflow
             new GdiScreenCaptureService(),
             new WpfClipboardWriter(),
             new ToastWindowService(),
-            new ResultWindowPresenter())
+            new ResultWindowPresenter(),
+            applyHotkey)
     {
     }
 
@@ -43,7 +45,8 @@ public sealed class SnipWorkflow
         IScreenCaptureService capture,
         IClipboardWriter clipboard,
         IToastService toast,
-        IResultPresenter resultPresenter)
+        IResultPresenter resultPresenter,
+        Func<HotkeyDefinition, bool>? applyHotkey = null)
     {
         _settingsStore = settingsStore;
         _settings = settings;
@@ -53,6 +56,7 @@ public sealed class SnipWorkflow
         _clipboard = clipboard;
         _toast = toast;
         _resultPresenter = resultPresenter;
+        _applyHotkey = applyHotkey;
         _unloadTimer = new System.Threading.Timer(_ => _ocrEngine.Unload());
     }
 
@@ -65,6 +69,7 @@ public sealed class SnipWorkflow
 
         try
         {
+            _unloadTimer.Change(Timeout.InfiniteTimeSpan, Timeout.InfiniteTimeSpan);
             ShowToast("Drag to select text");
             var selection = _selection.SelectRectangle();
             if (selection is null)
@@ -114,7 +119,7 @@ public sealed class SnipWorkflow
 
     public void ShowSettings()
     {
-        var window = new SettingsWindow(_settingsStore, _settings);
+        var window = new SettingsWindow(_settingsStore, _settings, _applyHotkey);
         window.Show();
         window.Activate();
     }

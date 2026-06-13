@@ -1,6 +1,6 @@
 # Third-Party Notices
 
-OCR Snip bundles or references the following third-party components.
+Text Snip bundles or references the following third-party components.
 
 ## PP-OCRv6 ONNX Models
 

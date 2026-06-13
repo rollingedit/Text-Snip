@@ -1,5 +1,6 @@
 using System.IO;
 using System.Text.Json;
+using OcrSnip.App;
 
 namespace OcrSnip.App.Settings;
 
@@ -32,9 +33,30 @@ public sealed class SettingsStore
             MigrateLegacyDefaultHotkey(settings);
             return settings;
         }
+        catch (Exception ex)
+        {
+            PreserveCorruptSettings(ex);
+            return new AppSettings();
+        }
+    }
+
+    private void PreserveCorruptSettings(Exception exception)
+    {
+        try
+        {
+            var directory = Path.GetDirectoryName(SettingsPath);
+            if (string.IsNullOrWhiteSpace(directory))
+            {
+                return;
+            }
+
+            var backup = Path.Combine(directory, $"settings.corrupt.{DateTimeOffset.Now:yyyyMMddHHmmss}.json");
+            File.Move(SettingsPath, backup, overwrite: false);
+            AppDiagnostics.LogException("Settings file was corrupt and was preserved.", exception);
+        }
         catch
         {
-            return new AppSettings();
+            // Settings recovery must never block startup.
         }
     }
 

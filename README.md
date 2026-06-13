@@ -53,7 +53,7 @@ The installer adds:
 * desktop shortcut by default;
 * uninstaller.
 
-If the Microsoft Visual C++ Runtime is missing or outdated, the installer runs the bundled Microsoft Visual C++ Redistributable.
+If the Microsoft Visual C++ Runtime is missing or outdated, the installer uses the bundled Microsoft Visual C++ Redistributable. If Windows blocks that runtime install without elevation, the installer stops with a clear message instead of leaving a broken app behind.
 
 The installer does not add a driver, service, browser extension, shell extension, background updater, telemetry agent, or network component.
 
@@ -71,6 +71,16 @@ Optional installer choices:
 5. Paste.
 
 If the clipboard is busy, Text Snip opens a small result window so the recognized text is still available.
+
+## Diagnostics
+
+Run this from the installed app directory to check model files, native runtime files, the VC++ runtime registration, settings path, and diagnostics log path:
+
+```powershell id="doctor-command"
+.\OcrSnip.App.exe --doctor
+```
+
+The doctor report does not capture screenshots, run OCR on user content, or log recognized text.
 
 ## Settings
 
@@ -100,7 +110,7 @@ Requirements:
 Common commands:
 
 ```powershell id="build-commands"
-.\.dotnet\dotnet.exe test OcrSnip.slnx -c Release
+dotnet test OcrSnip.slnx -c Release
 powershell -ExecutionPolicy Bypass -File tools\publish.ps1
 powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 ```

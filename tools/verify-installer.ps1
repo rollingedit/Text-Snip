@@ -18,6 +18,7 @@ $cliProject = Join-Path $repoRoot "src/OcrSnip.Tools.OcrCli/OcrSnip.Tools.OcrCli
 $userSettingsPath = Join-Path $env:APPDATA "OcrSnip/settings.json"
 $runKeyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
 $runValueName = "OcrSnip"
+$dirtyTarget = Join-Path $repoRoot "artifacts/installer-test/DirtyTextSnip"
 
 function Assert-AssociatedIcon([string]$Path) {
     Add-Type -AssemblyName System.Drawing
@@ -110,10 +111,28 @@ foreach ($requiredSnippet in @(
     'Name: "resetuserdata"',
     'Name: "{userappdata}\OcrSnip"; Tasks: resetuserdata',
     'Name: "{localappdata}\OcrSnip\logs"; Tasks: resetuserdata',
-    'ValueName: "OcrSnip"; Flags: deletevalue'
+    'ValueName: "OcrSnip"; Flags: deletevalue',
+    'ValueName: "OcrSnip"; ValueData:',
+    'Flags: uninsdeletevalue',
+    'Description: "Start Text Snip at startup"',
+    'OutputBaseFilename=Text-Snip-Setup-x64'
 )) {
     if (!$installerScriptContent.Contains($requiredSnippet)) {
         throw "Installer script is missing required repair/reset behavior: $requiredSnippet"
+    }
+}
+
+foreach ($forbiddenSnippet in @(
+    'Name: "{app}\*"',
+    'Name: "{app}"',
+    '[UninstallDelete]',
+    'when I sign in',
+    'OutputBaseFilename=OcrSnip-Setup-x64',
+    '#define MyAppName "OCR Snip"',
+    '#define MyAppVersion "0.1.0"'
+)) {
+    if ($installerScriptContent.Contains($forbiddenSnippet)) {
+        throw "Installer script contains forbidden unsafe/stale behavior: $forbiddenSnippet"
     }
 }
 
@@ -130,9 +149,45 @@ if (Test-Path $target) {
     Remove-Item $target -Recurse -Force
 }
 
+if (Test-Path $dirtyTarget) {
+    Remove-Item $dirtyTarget -Recurse -Force
+}
+
 Stop-ExistingOcrSnipApp
 $runSnapshot = Get-OcrSnipRunValue
 $settingsSnapshot = $null
+
+New-Item -ItemType Directory -Force -Path $dirtyTarget | Out-Null
+$sentinel = Join-Path $dirtyTarget "user-owned-sentinel.txt"
+Set-Content -LiteralPath $sentinel -Value "must survive install and uninstall"
+$dirtyInstallArgs = @(
+    "/VERYSILENT",
+    "/SUPPRESSMSGBOXES",
+    "/NORESTART",
+    "/CURRENTUSER",
+    "/TASKS=",
+    "/DIR=$dirtyTarget"
+)
+$dirtyInstall = Start-Process -FilePath $setup -ArgumentList $dirtyInstallArgs -Wait -PassThru
+if ($dirtyInstall.ExitCode -ne 0) {
+    throw "Dirty-directory install failed with exit code $($dirtyInstall.ExitCode)."
+}
+
+if (!(Test-Path -LiteralPath $sentinel)) {
+    throw "Installer deleted a non-product sentinel file during install."
+}
+
+$dirtyUninstaller = Join-Path $dirtyTarget "unins000.exe"
+$dirtyUninstall = Start-Process -FilePath $dirtyUninstaller -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -Wait -PassThru
+if ($dirtyUninstall.ExitCode -ne 0) {
+    throw "Dirty-directory uninstall failed with exit code $($dirtyUninstall.ExitCode)."
+}
+
+if (!(Test-Path -LiteralPath $sentinel)) {
+    throw "Uninstaller deleted a non-product sentinel file."
+}
+
+Remove-Item $dirtyTarget -Recurse -Force
 
 New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
 $installArgs = @(
@@ -182,6 +237,47 @@ if (($ocrOutput -join "`n") -notmatch "OCR TEST") {
     throw "Installed model OCR verification did not output expected text.`n$ocrOutput"
 }
 
+$startupArgs = @(
+    "/VERYSILENT",
+    "/SUPPRESSMSGBOXES",
+    "/NORESTART",
+    "/CURRENTUSER",
+    "/TASKS=launchatlogin",
+    "/DIR=$target"
+)
+$startupInstall = Start-Process -FilePath $setup -ArgumentList $startupArgs -Wait -PassThru
+if ($startupInstall.ExitCode -ne 0) {
+    throw "Installer startup-enabled repair failed with exit code $($startupInstall.ExitCode)."
+}
+
+$startupValue = Get-OcrSnipRunValue
+if (!$startupValue.Exists -or $startupValue.Value -notmatch [regex]::Escape($exe) -or $startupValue.Value -notmatch "--tray") {
+    throw "Startup-enabled install did not create the expected Text Snip Run value. Actual: $($startupValue.Value)"
+}
+
+$uninstallStartup = Start-Process -FilePath $uninstaller -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -Wait -PassThru
+if ($uninstallStartup.ExitCode -ne 0) {
+    throw "Startup-enabled uninstall failed with exit code $($uninstallStartup.ExitCode)."
+}
+
+$startupAfterUninstall = Get-OcrSnipRunValue
+if ($startupAfterUninstall.Exists) {
+    throw "Uninstall left Text Snip startup Run value behind: $($startupAfterUninstall.Value)"
+}
+
+if (Test-Path $target) {
+    Remove-Item $target -Recurse -Force
+}
+
+New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
+$install = Start-Process -FilePath $setup -ArgumentList $installArgs -Wait -PassThru
+if ($install.ExitCode -ne 0) {
+    throw "Installer failed with exit code $($install.ExitCode)."
+}
+
+$exe = Join-Path $target "OcrSnip.App.exe"
+$uninstaller = Join-Path $target "unins000.exe"
+
 Stop-ExistingOcrSnipApp
 
 try {
@@ -202,7 +298,6 @@ try {
 }
 finally {
     Stop-ExistingOcrSnipApp
-    Restore-OcrSnipRunValue $runSnapshot
     if ($settingsSnapshot) {
         Restore-AppSettings $settingsSnapshot
     }
@@ -220,4 +315,5 @@ if (Test-Path $target) {
     }
 }
 
+Restore-OcrSnipRunValue $runSnapshot
 Write-Host "Installer verification passed."

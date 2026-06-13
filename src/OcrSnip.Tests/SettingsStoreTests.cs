@@ -69,4 +69,21 @@ public sealed class SettingsStoreTests
         Assert.Equal(HotkeyModifiers.Windows | HotkeyModifiers.Shift, loaded.Hotkey.Modifiers);
         Assert.Equal('O', loaded.Hotkey.Key);
     }
+
+    [Fact]
+    public void Load_PreservesCorruptSettingsFile()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "OcrSnipTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "settings.json");
+        Directory.CreateDirectory(directory);
+        File.WriteAllText(path, "{ broken");
+        var store = new SettingsStore(path);
+
+        var loaded = store.Load();
+
+        Assert.False(store.Exists);
+        Assert.Equal(HotkeyDefinition.Default, loaded.Hotkey);
+        var corruptFile = Assert.Single(Directory.GetFiles(directory, "settings.corrupt.*.json"));
+        Assert.Equal("{ broken", File.ReadAllText(corruptFile));
+    }
 }
