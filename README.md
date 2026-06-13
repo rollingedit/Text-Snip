@@ -39,7 +39,7 @@ https://github.com/rollingedit/Text-Snip/releases/latest
 Run:
 
 ```text
-OcrSnip-Setup-x64.exe
+Text-Snip-Setup-x64.exe
 ```
 
 The installer adds:
@@ -58,7 +58,7 @@ The installer does not add a driver, service, browser extension, shell extension
 
 Optional installer choices:
 
-- **Start Text Snip at startup**: off by default.
+- **Start Text Snip at startup**: on by default.
 - **Reset Text Snip settings and logs**: off by default, useful for repair installs.
 
 ## Use
@@ -105,7 +105,7 @@ powershell -ExecutionPolicy Bypass -File tools\build-installer.ps1
 The user-facing installer is created at:
 
 ```text
-installer\Output\OcrSnip-Setup-x64.exe
+installer\Output\Text-Snip-Setup-x64.exe
 ```
 
 ## License

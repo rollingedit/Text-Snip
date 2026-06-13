@@ -1,17 +1,17 @@
-#define MyAppName "OCR Snip"
+#define MyAppName "Text Snip"
 #define MyAppExeName "OcrSnip.App.exe"
 #define MyAppVersion GetEnv("OCRSNIP_VERSION")
 #if MyAppVersion == ""
-  #define MyAppVersion "0.1.0"
+  #define MyAppVersion "1.0.0"
 #endif
 
 [Setup]
 AppId={{2A3AE8AF-87D7-40C4-8C79-5158B3A9B89F}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
-DefaultDirName={autopf}\OcrSnip
+DefaultDirName={autopf}\Text Snip
 DefaultGroupName={#MyAppName}
-OutputBaseFilename=OcrSnip-Setup-x64
+OutputBaseFilename=Text-Snip-Setup-x64
 ArchitecturesAllowed=x64
 ArchitecturesInstallIn64BitMode=x64
 Compression=lzma2
@@ -23,16 +23,16 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checkedonce
-Name: "launchatlogin"; Description: "Start OCR Snip at startup"; GroupDescription: "Startup:"; Flags: unchecked
-Name: "resetuserdata"; Description: "Reset OCR Snip settings and logs"; GroupDescription: "Repair options:"; Flags: unchecked
+Name: "launchatlogin"; Description: "Start Text Snip at startup"; GroupDescription: "Startup:"; Flags: checkedonce
+Name: "resetuserdata"; Description: "Reset Text Snip settings and logs"; GroupDescription: "Repair options:"; Flags: unchecked
 
 [Files]
 Source: "..\artifacts\publish\OcrSnip\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\artifacts\prereqs\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
-Name: "{group}\OCR Snip"; Filename: "{app}\{#MyAppExeName}"
-Name: "{autodesktop}\OCR Snip"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
+Name: "{group}\Text Snip"; Filename: "{app}\{#MyAppExeName}"
+Name: "{autodesktop}\Text Snip"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "OcrSnip"; Flags: deletevalue
@@ -42,6 +42,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Type: filesandordirs; Name: "{app}\*"
 Type: files; Name: "{autodesktop}\OCR Snip.lnk"
 Type: files; Name: "{group}\OCR Snip.lnk"
+Type: files; Name: "{autodesktop}\Text Snip.lnk"
+Type: files; Name: "{group}\Text Snip.lnk"
 Type: filesandordirs; Name: "{userappdata}\OcrSnip"; Tasks: resetuserdata
 Type: filesandordirs; Name: "{localappdata}\OcrSnip\logs"; Tasks: resetuserdata
 

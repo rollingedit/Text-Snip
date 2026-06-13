@@ -6,7 +6,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $output = Join-Path $repoRoot $OutputPath
 $app = Join-Path $repoRoot "artifacts/publish/OcrSnip/OcrSnip.App.exe"
-$installer = Join-Path $repoRoot "installer/Output/OcrSnip-Setup-x64.exe"
+$installer = Join-Path $repoRoot "installer/Output/Text-Snip-Setup-x64.exe"
 
 New-Item -ItemType Directory -Force -Path (Split-Path $output -Parent) | Out-Null
 $targets = @($app, $installer) | Where-Object { Test-Path $_ }

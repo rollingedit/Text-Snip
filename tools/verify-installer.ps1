@@ -9,7 +9,7 @@ $dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
 if (!(Test-Path $dotnet)) {
     $dotnet = "dotnet"
 }
-$setup = Join-Path $repoRoot "installer/Output/OcrSnip-Setup-x64.exe"
+$setup = Join-Path $repoRoot "installer/Output/Text-Snip-Setup-x64.exe"
 $installerScript = Join-Path $repoRoot "installer/OcrSnip.iss"
 $vcRedist = Join-Path $repoRoot "artifacts/prereqs/vc_redist.x64.exe"
 $target = Join-Path $repoRoot $InstallDir
