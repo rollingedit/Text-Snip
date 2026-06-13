@@ -26,7 +26,7 @@ public sealed class SettingsWindow : Window
         panel.Children.Add(copyMode);
         var toast = new System.Windows.Controls.CheckBox { Content = "Show toast", IsChecked = settings.ToastEnabled, Margin = new Thickness(0, 0, 0, 12) };
         panel.Children.Add(toast);
-        var launchAtLogin = new System.Windows.Controls.CheckBox { Content = "Launch at login", IsChecked = settings.LaunchAtLogin, Margin = new Thickness(0, 0, 0, 12) };
+        var launchAtLogin = new System.Windows.Controls.CheckBox { Content = "Launch at startup", IsChecked = settings.LaunchAtLogin, Margin = new Thickness(0, 0, 0, 12) };
         panel.Children.Add(launchAtLogin);
         var save = new System.Windows.Controls.Button { Content = "Save", Height = 32, HorizontalAlignment = System.Windows.HorizontalAlignment.Right, MinWidth = 96 };
         save.Click += (_, _) =>

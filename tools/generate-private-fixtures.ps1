@@ -218,12 +218,12 @@ $fixtures = @(
         (TextItem "Clipboard" 24 168 24 "Segoe UI" "Black")
         (TextItem "Copy mode: Raw lines" 52 208 21 "Segoe UI" "Black")
         (TextItem "Startup" 24 258 24 "Segoe UI" "Black")
-        (TextItem "Launch at login" 52 298 21 "Segoe UI" "Black")
+        (TextItem "Launch at startup" 52 298 21 "Segoe UI" "Black")
         (TextItem "Hotkey" 520 78 24 "Segoe UI" "Black")
-        (TextItem "Ctrl + Shift + O" 548 118 21 "Segoe UI" "Black")
+        (TextItem "Win + Shift + O" 548 118 21 "Segoe UI" "Black")
         (TextItem "Reset" 548 168 21 "Segoe UI" "DimGray")
         (LineItem 480 24 480 390 "Gainsboro" 2)
-    ) "White" @("Capture", "Clipboard", "Hotkey", "Ctrl")),
+    ) "White" @("Capture", "Clipboard", "Hotkey", "Win")),
     (Fixture "dense_table_rows" "Invoice Status Amount Due" 1060 420 "dense" "small table columns and repeated text" @(
         (TextItem "Invoice   Status      Amount     Due" 24 24 28 "Consolas" "Black" "Bold")
         (LineItem 20 64 1010 64 "Silver" 1)

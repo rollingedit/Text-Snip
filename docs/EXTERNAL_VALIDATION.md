@@ -125,7 +125,7 @@ powershell -ExecutionPolicy Bypass -File tools\validate-machine-environment.ps1 
 - `darkTheme`: Verify app launch, settings, toast, and hotkey snip in Windows dark theme.
 - `standardAccount`: Run release verification from a non-elevated standard account.
 - `adminAccount`: Run release verification from an elevated admin account.
-- `postRebootHotkey`: Enable launch at login, reboot, sign in, and verify `Ctrl+Shift+O` starts a snip.
+- `postRebootHotkey`: Enable launch at startup, reboot, sign in, and verify `Win+Shift+O` starts a snip.
 - `multiMonitorCapture`: Select text on each monitor and across monitor boundaries where the layout permits; verify copied text matches the target.
 - `intelModelLoad`: Run OCR self-tests or fixture OCR on an Intel x64 CPU.
 - `amdModelLoad`: Run OCR self-tests or fixture OCR on an AMD x64 CPU.

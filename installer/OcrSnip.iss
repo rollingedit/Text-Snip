@@ -23,7 +23,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checkedonce
-Name: "launchatlogin"; Description: "Start OCR Snip when I sign in"; GroupDescription: "Startup:"; Flags: unchecked
+Name: "launchatlogin"; Description: "Start OCR Snip at startup"; GroupDescription: "Startup:"; Flags: unchecked
 Name: "resetuserdata"; Description: "Reset OCR Snip settings and logs"; GroupDescription: "Repair options:"; Flags: unchecked
 
 [Files]

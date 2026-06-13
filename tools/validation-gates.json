@@ -45,7 +45,7 @@
   },
   {
     "id": "postRebootHotkey",
-    "description": "Enable launch at login, reboot, sign in, and verify Win+Shift+O starts a snip."
+    "description": "Enable launch at startup, reboot, sign in, and verify Win+Shift+O starts a snip."
   },
   {
     "id": "multiMonitorCapture",
