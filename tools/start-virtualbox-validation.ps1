@@ -8,7 +8,9 @@ param(
     [int]$Device = 0,
     [ValidateSet("gui", "headless", "separate")]
     [string]$StartType = "gui",
+    [string]$AttachedIsoRoot = "artifacts/virtualbox-validation",
     [switch]$RecreateIso,
+    [switch]$AttachOriginalIso,
     [switch]$DryRun,
     [switch]$NoStart,
     [switch]$Detach
@@ -41,6 +43,22 @@ if (!$Detach -and ($RecreateIso -or !(Test-Path $iso))) {
 
 if (!$Detach -and !(Test-Path $iso)) {
     throw "Validation ISO does not exist: $iso"
+}
+
+function Get-AttachedIsoPath {
+    if ($AttachOriginalIso) {
+        return $iso
+    }
+
+    $safeVmName = ($VmName -replace '[^A-Za-z0-9_.-]', '_')
+    $copyRoot = Join-Path $repoRoot (Join-Path $AttachedIsoRoot $safeVmName)
+    $copyPath = Join-Path $copyRoot "OcrSnip-ExternalValidationKit.iso"
+    if (!$DryRun) {
+        New-Item -ItemType Directory -Force -Path $copyRoot | Out-Null
+        Copy-Item -LiteralPath $iso -Destination $copyPath -Force
+    }
+
+    return $copyPath
 }
 
 function Invoke-VBoxManage([string[]]$Arguments) {
@@ -87,7 +105,8 @@ if ($Detach) {
     return
 }
 
-Invoke-VBoxManage @("storageattach", $VmName, "--storagectl", $ControllerName, "--port", "$Port", "--device", "$Device", "--type", "dvddrive", "--medium", $iso)
+$attachedIso = Get-AttachedIsoPath
+Invoke-VBoxManage @("storageattach", $VmName, "--storagectl", $ControllerName, "--port", "$Port", "--device", "$Device", "--type", "dvddrive", "--medium", $attachedIso)
 if (!$NoStart) {
     Invoke-VBoxManage @("startvm", $VmName, "--type", $StartType)
 }

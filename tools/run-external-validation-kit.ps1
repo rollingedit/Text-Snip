@@ -26,7 +26,22 @@ $appRoot = Join-Path $kitRoot "OcrSnip"
 $exe = Join-Path $appRoot "OcrSnip.App.exe"
 $fixture = Join-Path $kitRoot "Fixtures/simple_text.png"
 $gateManifest = Join-Path $PSScriptRoot "validation-gates.json"
-$outputDirectory = Join-Path $kitRoot $OutputRoot
+
+function Resolve-OutputDirectory([string]$Root) {
+    if ([System.IO.Path]::IsPathRooted($Root)) {
+        return $Root
+    }
+
+    $kitDrive = [System.IO.DriveInfo]::new([System.IO.Path]::GetPathRoot($kitRoot.Path))
+    if ($kitDrive.DriveType -eq [System.IO.DriveType]::CDRom) {
+        $desktop = [Environment]::GetFolderPath([Environment+SpecialFolder]::DesktopDirectory)
+        return Join-Path $desktop (Join-Path "OcrSnipExternalValidation" $Root)
+    }
+
+    return Join-Path $kitRoot $Root
+}
+
+$outputDirectory = Resolve-OutputDirectory $OutputRoot
 $evidenceFile = Join-Path $outputDirectory "external-validation.json"
 $statusFile = Join-Path $outputDirectory "validation-status.md"
 $metadataFile = Join-Path $outputDirectory "validation-run-metadata.json"

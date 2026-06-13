@@ -36,6 +36,8 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead($kit)
 try {
     $entries = @($archive.Entries)
     Assert-ZipEntry $entries "README.md"
+    Assert-ZipEntry $entries "START-HERE.txt"
+    Assert-ZipEntry $entries "autorun.inf"
     Assert-ZipEntry $entries "Run-Windows10.cmd"
     Assert-ZipEntry $entries "Run-AMD.cmd"
     Assert-ZipEntry $entries "Run-Admin-Elevated.cmd"

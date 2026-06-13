@@ -29,6 +29,29 @@ Copy-Item -LiteralPath $fixture -Destination (Join-Path $staging "Fixtures/simpl
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "run-external-validation-kit.ps1") -Destination (Join-Path $staging "tools/run-external-validation-kit.ps1")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "validation-gates.json") -Destination (Join-Path $staging "tools/validation-gates.json")
 
+Set-Content -LiteralPath (Join-Path $staging "autorun.inf") -Value @(
+    "[AutoRun]",
+    "label=OCR Snip Validation",
+    "open=Run-Windows10.cmd",
+    "action=Run OCR Snip Windows 10 validation"
+)
+
+Set-Content -LiteralPath (Join-Path $staging "START-HERE.txt") -Value @(
+    "OCR Snip External Validation Kit",
+    "",
+    "Run the launcher that matches this machine:",
+    "",
+    "- Run-Windows10.cmd for Windows 10 validation",
+    "- Run-AMD.cmd for AMD CPU validation",
+    "- Run-Admin-Elevated.cmd from an elevated session for admin validation",
+    "- Prepare-PostReboot.cmd to prepare the reboot persistence check",
+    "- Run-DPI-125.cmd or Run-DPI-150.cmd for DPI validation",
+    "- Run-MixedDPI-MultiMonitor.cmd after arranging mixed-DPI/multi-monitor validation",
+    "",
+    "When this kit is run from a mounted ISO, evidence is written to:",
+    "Desktop\\OcrSnipExternalValidation\\artifacts\\reports\\external-validation-export.zip"
+)
+
 Set-Content -LiteralPath (Join-Path $staging "Run-Windows10.cmd") -Value @(
     "@echo off",
     "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict",
@@ -95,6 +118,7 @@ Set-Content -LiteralPath (Join-Path $staging "README.md") -Value @(
     '````',
     "",
     'The runner writes `artifacts\reports\external-validation-export.zip`.',
+    'When run from the ISO/CD drive, the runner writes to `Desktop\OcrSnipExternalValidation\artifacts\reports\external-validation-export.zip` because the mounted ISO is read-only.',
     "Import that ZIP back in the repo with:",
     "",
     '````powershell',
