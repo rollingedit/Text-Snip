@@ -17,9 +17,27 @@ Add-Type @"
 using System;
 using System.Runtime.InteropServices;
 public static class InputNative {
+  [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public InputUnion u; }
+  [StructLayout(LayoutKind.Explicit)] public struct InputUnion { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; [FieldOffset(0)] public HARDWAREINPUT hi; }
+  [StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public UIntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public UIntPtr dwExtraInfo; }
+  [StructLayout(LayoutKind.Sequential)] public struct HARDWAREINPUT { public uint uMsg; public ushort wParamL; public ushort wParamH; }
+  [DllImport("user32.dll", SetLastError=true)] public static extern uint SendInput(uint cInputs, INPUT[] pInputs, int cbSize);
   [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
   [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
-  [DllImport("user32.dll")] public static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
+  public static void SendCtrlShiftO() {
+    INPUT[] inputs = new INPUT[6];
+    inputs[0].type = 1; inputs[0].u.ki.wVk = 0x11;
+    inputs[1].type = 1; inputs[1].u.ki.wVk = 0x10;
+    inputs[2].type = 1; inputs[2].u.ki.wVk = 0x4F;
+    inputs[3].type = 1; inputs[3].u.ki.wVk = 0x4F; inputs[3].u.ki.dwFlags = 0x0002;
+    inputs[4].type = 1; inputs[4].u.ki.wVk = 0x10; inputs[4].u.ki.dwFlags = 0x0002;
+    inputs[5].type = 1; inputs[5].u.ki.wVk = 0x11; inputs[5].u.ki.dwFlags = 0x0002;
+    uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
+    if (sent != inputs.Length) {
+      throw new InvalidOperationException("SendInput failed for Ctrl+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
+    }
+  }
 }
 "@
 
@@ -50,14 +68,7 @@ try {
     $app = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
     Start-Sleep -Seconds 3
 
-    # Ctrl+Shift+O
-    [InputNative]::keybd_event(0x11, 0, 0, [UIntPtr]::Zero)
-    [InputNative]::keybd_event(0x10, 0, 0, [UIntPtr]::Zero)
-    [InputNative]::keybd_event(0x4F, 0, 0, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 80
-    [InputNative]::keybd_event(0x4F, 0, 2, [UIntPtr]::Zero)
-    [InputNative]::keybd_event(0x10, 0, 2, [UIntPtr]::Zero)
-    [InputNative]::keybd_event(0x11, 0, 2, [UIntPtr]::Zero)
+    [InputNative]::SendCtrlShiftO()
 
     Start-Sleep -Seconds 1
     [InputNative]::SetCursorPos(130, 155) | Out-Null
