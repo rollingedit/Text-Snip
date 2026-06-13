@@ -12,6 +12,7 @@ public static class ClipboardService
             try
             {
                 System.Windows.Clipboard.SetText(text, System.Windows.TextDataFormat.UnicodeText);
+                System.Windows.Clipboard.Flush();
                 error = null;
                 return true;
             }

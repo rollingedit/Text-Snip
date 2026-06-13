@@ -25,9 +25,22 @@ if ($ocr.ExitCode -ne 0) {
     throw "OCR clipboard self-test failed with exit code $($ocr.ExitCode)"
 }
 
-$clipboard = Get-Clipboard -Raw
-if ($clipboard -notmatch "OCR TEST") {
-    throw "OCR clipboard self-test did not place expected text on clipboard. Clipboard: $clipboard"
+function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
+        if ($clipboard -match [regex]::Escape($ExpectedText)) {
+            return $true
+        }
+
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    return $false
+}
+
+if (!(Wait-ClipboardContains "OCR TEST")) {
+    throw "OCR clipboard self-test did not place expected text on clipboard."
 }
 
 Write-Host "App self-tests passed."

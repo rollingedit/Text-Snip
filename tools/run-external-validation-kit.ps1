@@ -94,6 +94,20 @@ function Assert-GatePassed($Data, [string]$Gate, [string]$Message) {
     }
 }
 
+function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5) {
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
+        if ($clipboard -match [regex]::Escape($ExpectedText)) {
+            return $true
+        }
+
+        Start-Sleep -Milliseconds 250
+    } while ((Get-Date) -lt $deadline)
+
+    return $false
+}
+
 function Invoke-AppSelfTests {
     $startup = Start-Process -FilePath $exe -ArgumentList "--self-test-startup" -Wait -PassThru -WindowStyle Hidden
     if ($startup.ExitCode -ne 0) {
@@ -105,8 +119,7 @@ function Invoke-AppSelfTests {
         throw "OCR self-test failed with exit code $($ocr.ExitCode)."
     }
 
-    $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
-    if ($clipboard -notmatch "OCR TEST") {
+    if (!(Wait-ClipboardContains "OCR TEST")) {
         throw "OCR self-test did not place expected text on clipboard."
     }
 }
