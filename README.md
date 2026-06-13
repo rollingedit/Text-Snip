@@ -26,7 +26,7 @@ Screenshots are captured in memory and not saved by Text Snip.
 * **Mobile-style OCR**: select what you see and copy it immediately.
 * **Local and private**: OCR runs on the machine with bundled models.
 * **Fast install**: one normal Windows installer, no zip workflow, no Python environment, no model download.
-* **Real OCR pipeline**: bundled [PP-OCRv6 small detector](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx) and [PP-OCRv6 small recognizer](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx) ONNX models through [ONNX Runtime](https://github.com/microsoft/onnxruntime), with OpenCV/OpenCvSharp for image preprocessing and Clipper2 for OCR text-box geometry.
+* **Real OCR pipeline**: bundled [PP-OCRv6 small detector](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx) and [PP-OCRv6 small recognizer](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx) ONNX models through [ONNX Runtime](https://github.com/microsoft/onnxruntime), with [OpenCvSharp](https://github.com/shimat/opencvsharp) / [OpenCV](https://github.com/opencv/opencv) for image preprocessing and [Clipper2](https://github.com/AngusJohnson/Clipper2) for OCR text-box geometry.
 * **Repairable installer**: reinstalling replaces stale app files and shortcuts; optional reset clears Text Snip settings/logs.
 
 ## Latest Release
@@ -113,8 +113,6 @@ installer\Output\Text-Snip-Setup-x64.exe
 
 ## Links
 
-* Repository: https://github.com/rollingedit/Text-Snip
-* Latest release: https://github.com/rollingedit/Text-Snip/releases/latest
 * PaddleOCR: https://github.com/PaddlePaddle/PaddleOCR
 * PP-OCRv6 small detector ONNX model: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx
 * PP-OCRv6 small recognizer ONNX model: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
