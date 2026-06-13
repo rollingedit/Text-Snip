@@ -11,6 +11,7 @@ param(
     [string]$AttachedIsoRoot = "artifacts/virtualbox-validation",
     [switch]$RecreateIso,
     [switch]$AttachOriginalIso,
+    [switch]$SkipInputOptimization,
     [switch]$DryRun,
     [switch]$NoStart,
     [switch]$Detach
@@ -107,11 +108,18 @@ if ($Detach) {
 
 $attachedIso = Get-AttachedIsoPath
 Invoke-VBoxManage @("storageattach", $VmName, "--storagectl", $ControllerName, "--port", "$Port", "--device", "$Device", "--type", "dvddrive", "--medium", $attachedIso)
+if (!$SkipInputOptimization -and $StartType -ne "headless") {
+    Invoke-VBoxManage @("modifyvm", $VmName, "--mouse", "usbtablet")
+}
+
 if (!$NoStart) {
     Invoke-VBoxManage @("startvm", $VmName, "--type", $StartType)
 }
 
 Write-Host "Validation ISO attached to VM '$VmName' on $ControllerName port $Port device $Device."
+if (!$SkipInputOptimization -and $StartType -ne "headless") {
+    Write-Host "VM pointing device set to usbtablet for more reliable GUI validation input."
+}
 if (!$NoStart) {
     Write-Host "Inside the VM, open the mounted CD drive and run the matching launcher, for example Run-Windows10.cmd."
 }
