@@ -164,9 +164,23 @@ function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5)
     return $false
 }
 
+function Stop-ExistingOcrSnipApp {
+    Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    $deadline = (Get-Date).AddSeconds(5)
+    do {
+        Start-Sleep -Milliseconds 250
+        $remaining = Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Select-Object -First 1
+    } while ($remaining -and (Get-Date) -lt $deadline)
+    if ($remaining) {
+        throw "Could not stop the previous OcrSnip.App instance before validation."
+    }
+}
+
 $appSelfTestClipboardObserved = $false
 
 function Invoke-AppSelfTests {
+    Stop-ExistingOcrSnipApp
+
     $startup = Start-Process -FilePath $exe -ArgumentList "--self-test-startup" -Wait -PassThru -WindowStyle Hidden
     if ($startup.ExitCode -ne 0) {
         throw "Startup self-test failed with exit code $($startup.ExitCode)."
@@ -407,15 +421,7 @@ Add-Type -AssemblyName System.Drawing
         } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
 
         if ($AllowFixedSelectionFallback -and !$UseExistingApp) {
-            Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
-            $stopDeadline = (Get-Date).AddSeconds(5)
-            do {
-                Start-Sleep -Milliseconds 250
-                $remainingApp = Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Select-Object -First 1
-            } while ($remainingApp -and (Get-Date) -lt $stopDeadline)
-            if ($remainingApp) {
-                throw "Could not stop the previous OcrSnip.App instance before fixed-selection hotkey validation."
-            }
+            Stop-ExistingOcrSnipApp
 
             Set-Clipboard -Value "__OCR_SNIP_PENDING__"
             $app = Start-Process -FilePath $exe -ArgumentList @("--validation-selection", "90,90,670,240") -PassThru -WindowStyle Hidden
