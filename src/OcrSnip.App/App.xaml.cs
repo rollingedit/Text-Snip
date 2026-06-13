@@ -91,6 +91,9 @@ file static class SelfTestCommand
                 case "--self-test-hotkey":
                     await RunHotkeyTestAsync().ConfigureAwait(true);
                     break;
+                case "--self-test-hotkey-listener":
+                    await RunHotkeyListenerTestAsync().ConfigureAwait(true);
+                    break;
             }
         }
         finally
@@ -151,6 +154,26 @@ file static class SelfTestCommand
         HotkeySelfTestInput.SendCtrlShiftO();
         var completed = await Task.WhenAny(received.Task, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(true);
         Environment.ExitCode = completed == received.Task ? 0 : 8;
+    }
+
+    private static async Task RunHotkeyListenerTestAsync()
+    {
+        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var hotkey = new HotkeyService(HotkeyDefinition.Default, () => received.TrySetResult());
+        if (!hotkey.TryRegister())
+        {
+            Environment.ExitCode = 10;
+            return;
+        }
+
+        var completed = await Task.WhenAny(received.Task, Task.Delay(TimeSpan.FromSeconds(10))).ConfigureAwait(true);
+        if (completed != received.Task)
+        {
+            Environment.ExitCode = 11;
+            return;
+        }
+
+        Environment.ExitCode = ClipboardService.TrySetText("OCR_SNIP_HOTKEY_OK", out _) ? 0 : 12;
     }
 }
 

@@ -36,21 +36,59 @@ public static class InputNative {
   [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public UIntPtr dwExtraInfo; }
   [StructLayout(LayoutKind.Sequential)] public struct HARDWAREINPUT { public uint uMsg; public ushort wParamL; public ushort wParamH; }
   [DllImport("user32.dll", SetLastError=true)] public static extern uint SendInput(uint cInputs, INPUT[] pInputs, int cbSize);
-  [DllImport("user32.dll")] public static extern bool SetCursorPos(int X, int Y);
-  [DllImport("user32.dll")] public static extern void mouse_event(uint dwFlags, uint dx, uint dy, uint dwData, UIntPtr dwExtraInfo);
+  [DllImport("user32.dll")] public static extern int GetSystemMetrics(int nIndex);
+  const uint INPUT_MOUSE = 0;
+  const uint INPUT_KEYBOARD = 1;
+  const uint MOUSEEVENTF_MOVE = 0x0001;
+  const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
+  const uint MOUSEEVENTF_LEFTUP = 0x0004;
+  const uint MOUSEEVENTF_ABSOLUTE = 0x8000;
+  const int SM_XVIRTUALSCREEN = 76;
+  const int SM_YVIRTUALSCREEN = 77;
+  const int SM_CXVIRTUALSCREEN = 78;
+  const int SM_CYVIRTUALSCREEN = 79;
   public static void SendCtrlShiftO() {
     INPUT[] inputs = new INPUT[6];
-    inputs[0].type = 1; inputs[0].u.ki.wVk = 0x11;
-    inputs[1].type = 1; inputs[1].u.ki.wVk = 0x10;
-    inputs[2].type = 1; inputs[2].u.ki.wVk = 0x4F;
-    inputs[3].type = 1; inputs[3].u.ki.wVk = 0x4F; inputs[3].u.ki.dwFlags = 0x0002;
-    inputs[4].type = 1; inputs[4].u.ki.wVk = 0x10; inputs[4].u.ki.dwFlags = 0x0002;
-    inputs[5].type = 1; inputs[5].u.ki.wVk = 0x11; inputs[5].u.ki.dwFlags = 0x0002;
+    inputs[0].type = INPUT_KEYBOARD; inputs[0].u.ki.wVk = 0x11;
+    inputs[1].type = INPUT_KEYBOARD; inputs[1].u.ki.wVk = 0x10;
+    inputs[2].type = INPUT_KEYBOARD; inputs[2].u.ki.wVk = 0x4F;
+    inputs[3].type = INPUT_KEYBOARD; inputs[3].u.ki.wVk = 0x4F; inputs[3].u.ki.dwFlags = 0x0002;
+    inputs[4].type = INPUT_KEYBOARD; inputs[4].u.ki.wVk = 0x10; inputs[4].u.ki.dwFlags = 0x0002;
+    inputs[5].type = INPUT_KEYBOARD; inputs[5].u.ki.wVk = 0x11; inputs[5].u.ki.dwFlags = 0x0002;
     uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
     if (sent != inputs.Length) {
       throw new InvalidOperationException("SendInput failed for Ctrl+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
     }
   }
+  static int NormalizeX(int x) {
+    int left = GetSystemMetrics(SM_XVIRTUALSCREEN);
+    int width = Math.Max(1, GetSystemMetrics(SM_CXVIRTUALSCREEN) - 1);
+    return (int)Math.Round((x - left) * 65535.0 / width);
+  }
+  static int NormalizeY(int y) {
+    int top = GetSystemMetrics(SM_YVIRTUALSCREEN);
+    int height = Math.Max(1, GetSystemMetrics(SM_CYVIRTUALSCREEN) - 1);
+    return (int)Math.Round((y - top) * 65535.0 / height);
+  }
+  static INPUT MouseInput(int x, int y, uint flags) {
+    INPUT input = new INPUT();
+    input.type = INPUT_MOUSE;
+    input.u.mi.dx = NormalizeX(x);
+    input.u.mi.dy = NormalizeY(y);
+    input.u.mi.dwFlags = flags | MOUSEEVENTF_ABSOLUTE;
+    return input;
+  }
+  static void SendMouseInput(int x, int y, uint flags) {
+    INPUT[] inputs = new INPUT[1];
+    inputs[0] = MouseInput(x, y, flags);
+    uint sent = SendInput(1, inputs, Marshal.SizeOf(typeof(INPUT)));
+    if (sent != 1) {
+      throw new InvalidOperationException("SendInput failed for mouse input. Sent " + sent + " of 1, last error " + Marshal.GetLastWin32Error() + ".");
+    }
+  }
+  public static void SendMouseMove(int x, int y) { SendMouseInput(x, y, MOUSEEVENTF_MOVE); }
+  public static void SendMouseDown(int x, int y) { SendMouseInput(x, y, MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTDOWN); }
+  public static void SendMouseUp(int x, int y) { SendMouseInput(x, y, MOUSEEVENTF_MOVE | MOUSEEVENTF_LEFTUP); }
 }
 "@
 
@@ -93,13 +131,21 @@ try {
     [InputNative]::SendCtrlShiftO()
 
     Start-Sleep -Seconds 1
-    [InputNative]::SetCursorPos(130, 155) | Out-Null
-    Start-Sleep -Milliseconds 100
-    [InputNative]::mouse_event(0x0002, 0, 0, 0, [UIntPtr]::Zero)
-    Start-Sleep -Milliseconds 100
-    [InputNative]::SetCursorPos(620, 245) | Out-Null
-    Start-Sleep -Milliseconds 250
-    [InputNative]::mouse_event(0x0004, 0, 0, 0, [UIntPtr]::Zero)
+    $dragLeft = 90
+    $dragTop = 90
+    $dragRight = 760
+    $dragBottom = 330
+    [InputNative]::SendMouseMove($dragLeft, $dragTop)
+    Start-Sleep -Milliseconds 200
+    [InputNative]::SendMouseDown($dragLeft, $dragTop)
+    Start-Sleep -Milliseconds 200
+    foreach ($step in 1..6) {
+        $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
+        $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
+        [InputNative]::SendMouseMove($x, $y)
+        Start-Sleep -Milliseconds 120
+    }
+    [InputNative]::SendMouseUp($dragRight, $dragBottom)
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {

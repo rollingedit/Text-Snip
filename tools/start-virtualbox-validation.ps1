@@ -108,7 +108,7 @@ if ($Detach) {
 
 $attachedIso = Get-AttachedIsoPath
 Invoke-VBoxManage @("storageattach", $VmName, "--storagectl", $ControllerName, "--port", "$Port", "--device", "$Device", "--type", "dvddrive", "--medium", $attachedIso)
-if (!$SkipInputOptimization -and $StartType -ne "headless") {
+if (!$SkipInputOptimization -and $StartType -ne "headless" -and $state -eq "poweroff") {
     Invoke-VBoxManage @("modifyvm", $VmName, "--mouse", "usbtablet")
 }
 
@@ -117,7 +117,7 @@ if (!$NoStart) {
 }
 
 Write-Host "Validation ISO attached to VM '$VmName' on $ControllerName port $Port device $Device."
-if (!$SkipInputOptimization -and $StartType -ne "headless") {
+if (!$SkipInputOptimization -and $StartType -ne "headless" -and $state -eq "poweroff") {
     Write-Host "VM pointing device set to usbtablet for more reliable GUI validation input."
 }
 if (!$NoStart) {
