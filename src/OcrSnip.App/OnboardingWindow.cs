@@ -11,13 +11,14 @@ public sealed class OnboardingWindow : Window
     {
         Title = "OCR Snip";
         Width = 420;
-        Height = 260;
+        Height = 300;
         ResizeMode = ResizeMode.NoResize;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
         ShowInTaskbar = true;
         Topmost = true;
 
         var root = new Grid { Margin = new Thickness(18) };
+        root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
         root.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
@@ -35,21 +36,38 @@ public sealed class OnboardingWindow : Window
 
         var body = new TextBlock
         {
-            Text = $"Press {settings.Hotkey} or use Start snip. OCR text is copied to the clipboard.",
+            Text = "Drag over text and release. OCR Snip copies recognized text to the clipboard.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = System.Windows.Media.Brushes.DimGray,
-            Margin = new Thickness(0, 0, 0, 18)
+            Margin = new Thickness(0, 0, 0, 12)
         };
         Grid.SetRow(body, 1);
         root.Children.Add(body);
 
+        var shortcut = new Border
+        {
+            BorderBrush = System.Windows.Media.Brushes.LightGray,
+            BorderThickness = new Thickness(1),
+            Padding = new Thickness(12, 10, 12, 10),
+            Margin = new Thickness(0, 0, 0, 14),
+            Child = new TextBlock
+            {
+                Text = $"Shortcut: {settings.Hotkey}",
+                FontSize = 18,
+                FontWeight = FontWeights.SemiBold,
+                TextAlignment = TextAlignment.Center
+            }
+        };
+        Grid.SetRow(shortcut, 2);
+        root.Children.Add(shortcut);
+
         var status = new TextBlock
         {
-            Text = "The tray icon stays available for settings and exit.",
+            Text = "The tray icon stays available for Start snip, Settings, and Exit. To pin OCR Snip, right-click this taskbar icon while this window is open.",
             TextWrapping = TextWrapping.Wrap,
             Foreground = System.Windows.Media.Brushes.DimGray
         };
-        Grid.SetRow(status, 2);
+        Grid.SetRow(status, 3);
         root.Children.Add(status);
 
         var buttons = new StackPanel
@@ -86,7 +104,7 @@ public sealed class OnboardingWindow : Window
         close.Click += (_, _) => Close();
         buttons.Children.Add(close);
 
-        Grid.SetRow(buttons, 3);
+        Grid.SetRow(buttons, 4);
         root.Children.Add(buttons);
         Content = root;
     }

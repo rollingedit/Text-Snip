@@ -2,6 +2,8 @@
 
 Press `Win+Shift+O`, drag over text, and release. OCR Snip copies recognized text to your clipboard.
 
+The installer creates a Start Menu shortcut and selects the desktop shortcut option by default. When OCR Snip is open, pin it from its taskbar icon if you want one-click access.
+
 ## Features
 
 - Local OCR
