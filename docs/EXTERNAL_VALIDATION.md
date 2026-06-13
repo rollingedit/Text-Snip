@@ -47,6 +47,7 @@ powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -
 The kit writes `artifacts\reports\external-validation-export.zip`, which can be imported directly back in this repo.
 For DPI gates, include `-IncludeDesktopHotkey`; the kit records DPI evidence only when a real desktop hotkey snip passes at the detected scale.
 For post-reboot validation with the kit, run `tools\run-external-validation-kit.ps1 -PreparePostRebootValidation`, reboot, sign in, and wait for the one-time logon task to write the export ZIP.
+Use `-RequireAdminAccount`, `-RequirePostRebootHotkey`, and `-RequireMultiMonitorCapture` when a run is intended to close those gates; the kit fails if the required evidence is not produced.
 
 To merge evidence collected on another machine:
 

@@ -49,7 +49,7 @@ For DPI validation, run from the target DPI layout and include the desktop hotke
 ````powershell
 -ExpectedDpiScale 125 -IncludeDesktopHotkey
 -ExpectedDpiScale 150 -IncludeDesktopHotkey
--RequireMixedDpi -RequireNegativeVirtualMonitor -MultiMonitorCapturePassed -IncludeDesktopHotkey
+-RequireMixedDpi -RequireNegativeVirtualMonitor -RequireMultiMonitorCapture -MultiMonitorCapturePassed -IncludeDesktopHotkey
 ````
 
 The runner writes `artifacts\reports\external-validation-export.zip`.
@@ -63,6 +63,12 @@ For post-reboot hotkey validation, prepare the one-time task, reboot, sign in, a
 
 ````powershell
 powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -PreparePostRebootValidation
+````
+
+For elevated admin validation, run PowerShell as administrator and add:
+
+````powershell
+-RequireAdminAccount
 ````
 "@ | Set-Content (Join-Path $staging "README.md")
 

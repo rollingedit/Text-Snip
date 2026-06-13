@@ -7,6 +7,9 @@ param(
     [int]$ExpectedDpiScale,
     [switch]$RequireMixedDpi,
     [switch]$RequireNegativeVirtualMonitor,
+    [switch]$RequireAdminAccount,
+    [switch]$RequirePostRebootHotkey,
+    [switch]$RequireMultiMonitorCapture,
     [switch]$IncludeDesktopHotkey,
     [switch]$IncludeHotkeyConflict,
     [switch]$PreparePostRebootValidation,
@@ -66,6 +69,12 @@ function Set-Gate($Data, [string]$Gate, [string]$Evidence) {
         passed = $true
         evidence = $Evidence
         verifiedAt = Get-Date -Format o
+    }
+}
+
+function Assert-GatePassed($Data, [string]$Gate, [string]$Message) {
+    if ($Data[$Gate].passed -ne $true) {
+        throw $Message
     }
 }
 
@@ -466,7 +475,19 @@ if ($MultiMonitorCapturePassed) {
 }
 
 if ($PostRebootHotkeyPassed) {
-    Set-Gate $evidence "postRebootHotkey" "Manual post-reboot login hotkey validation passed while running portable validation kit"
+    Set-Gate $evidence "postRebootHotkey" "Post-reboot login hotkey validation passed while running portable validation kit"
+}
+
+if ($RequireAdminAccount) {
+    Assert-GatePassed $evidence "adminAccount" "Admin account validation was required but this run was not elevated."
+}
+
+if ($RequirePostRebootHotkey) {
+    Assert-GatePassed $evidence "postRebootHotkey" "Post-reboot hotkey validation was required but has not passed. Run -PreparePostRebootValidation, reboot, sign in, and wait for completion."
+}
+
+if ($RequireMultiMonitorCapture) {
+    Assert-GatePassed $evidence "multiMonitorCapture" "Multi-monitor capture validation was required but was not marked passed. Re-run with -MultiMonitorCapturePassed after manual multi-monitor capture verification."
 }
 
 $evidence | ConvertTo-Json -Depth 4 | Set-Content $evidenceFile
