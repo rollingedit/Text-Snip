@@ -110,6 +110,7 @@ if ($RunLocalSelfTest) {
         $exportEntries = @($exportArchive.Entries)
         Assert-ZipEntry $exportEntries "external-validation.json"
         Assert-ZipEntry $exportEntries "validation-status.md"
+        Assert-ZipEntry $exportEntries "validation-run-metadata.json"
     }
     finally {
         $exportArchive.Dispose()

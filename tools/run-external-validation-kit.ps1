@@ -29,6 +29,7 @@ $gateManifest = Join-Path $PSScriptRoot "validation-gates.json"
 $outputDirectory = Join-Path $kitRoot $OutputRoot
 $evidenceFile = Join-Path $outputDirectory "external-validation.json"
 $statusFile = Join-Path $outputDirectory "validation-status.md"
+$metadataFile = Join-Path $outputDirectory "validation-run-metadata.json"
 $exportZip = Join-Path $outputDirectory "external-validation-export.zip"
 
 function Assert-Exists([string]$Path) {
@@ -343,6 +344,10 @@ function Write-Status($Evidence, [string]$Path) {
     $lines | Set-Content $Path
 }
 
+function Write-RunMetadata($Metadata, [string]$Path) {
+    $Metadata | ConvertTo-Json -Depth 6 | Set-Content $Path
+}
+
 Assert-Exists $exe
 Assert-Exists $fixture
 Assert-Exists $gateManifest
@@ -363,6 +368,8 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]$identity
 $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
+$appSelfTestsPassed = $false
+$idleNoNetworkPassed = $false
 $desktopHotkeyPassed = $false
 $hotkeyConflictPassed = $false
 
@@ -380,7 +387,9 @@ if ($CompletePostRebootValidation) {
 }
 
 Invoke-AppSelfTests
+$appSelfTestsPassed = $true
 Test-IdleNoNetwork
+$idleNoNetworkPassed = $true
 
 if ($IncludeDesktopHotkey) {
     Test-DesktopHotkey
@@ -427,15 +436,34 @@ if ($cpu.Manufacturer -match "Intel|GenuineIntel") {
 }
 
 if ($isAdmin) {
-    Set-Gate $evidence "adminAccount" "Portable validation kit ran from elevated administrator token for $($identity.Name)"
+    Set-Gate $evidence "adminAccount" "Portable validation kit ran from an elevated administrator token"
 }
 else {
-    Set-Gate $evidence "standardAccount" "Portable validation kit ran from non-elevated account for $($identity.Name)"
+    Set-Gate $evidence "standardAccount" "Portable validation kit ran from a non-elevated account"
 }
 
 $dpiScales = @()
+$screenMetadata = @()
 foreach ($screen in $screens) {
     $dpiScale = Get-DpiScalePercent $screen
+    $screenMetadata += [ordered]@{
+        deviceName = $screen.DeviceName
+        primary = $screen.Primary
+        bounds = [ordered]@{
+            x = $screen.Bounds.X
+            y = $screen.Bounds.Y
+            width = $screen.Bounds.Width
+            height = $screen.Bounds.Height
+        }
+        workingArea = [ordered]@{
+            x = $screen.WorkingArea.X
+            y = $screen.WorkingArea.Y
+            width = $screen.WorkingArea.Width
+            height = $screen.WorkingArea.Height
+        }
+        dpiScalePercent = $dpiScale
+    }
+
     if ($dpiScale -gt 0) {
         $dpiScales += $dpiScale
         if ($dpiScale -in @(100, 125, 150) -and $desktopHotkeyPassed) {
@@ -492,10 +520,58 @@ if ($RequireMultiMonitorCapture) {
 
 $evidence | ConvertTo-Json -Depth 4 | Set-Content $evidenceFile
 Write-Status $evidence $statusFile
+$metadata = [ordered]@{
+    generatedAt = Get-Date -Format o
+    os = [ordered]@{
+        caption = $os.Caption
+        version = $os.Version
+        architecture = $os.OSArchitecture
+    }
+    cpu = [ordered]@{
+        manufacturer = $cpu.Manufacturer
+        name = $cpu.Name
+    }
+    process = [ordered]@{
+        elevatedAdministrator = $isAdmin
+        is64BitProcess = [Environment]::Is64BitProcess
+        is64BitOperatingSystem = [Environment]::Is64BitOperatingSystem
+    }
+    display = [ordered]@{
+        screenCount = @($screens).Count
+        dpiScales = @($dpiScales)
+        mixedDpi = (@($dpiScales | Select-Object -Unique).Count -gt 1)
+        hasNegativeVirtualMonitor = ($screenMetadata | Where-Object { $_.bounds.x -lt 0 -or $_.bounds.y -lt 0 }) -ne $null
+        screens = $screenMetadata
+    }
+    requestedChecks = [ordered]@{
+        expectedWindows = $ExpectedWindows
+        expectedCpuVendor = $ExpectedCpuVendor
+        expectedDpiScale = $ExpectedDpiScale
+        requireMixedDpi = [bool]$RequireMixedDpi
+        requireNegativeVirtualMonitor = [bool]$RequireNegativeVirtualMonitor
+        requireAdminAccount = [bool]$RequireAdminAccount
+        requirePostRebootHotkey = [bool]$RequirePostRebootHotkey
+        requireMultiMonitorCapture = [bool]$RequireMultiMonitorCapture
+        includeDesktopHotkey = [bool]$IncludeDesktopHotkey
+        includeHotkeyConflict = [bool]$IncludeHotkeyConflict
+        completePostRebootValidation = [bool]$CompletePostRebootValidation
+        multiMonitorCapturePassed = [bool]$MultiMonitorCapturePassed
+    }
+    completedChecks = [ordered]@{
+        appSelfTests = $appSelfTestsPassed
+        idleNoNetwork = $idleNoNetworkPassed
+        desktopHotkey = $desktopHotkeyPassed
+        hotkeyConflict = $hotkeyConflictPassed
+        postRebootHotkey = [bool]$PostRebootHotkeyPassed
+        multiMonitorCapture = [bool]$MultiMonitorCapturePassed
+    }
+}
+Write-RunMetadata $metadata $metadataFile
 if (Test-Path $exportZip) {
     Remove-Item -LiteralPath $exportZip -Force
 }
-Compress-Archive -Path $evidenceFile, $statusFile -DestinationPath $exportZip -Force
+Compress-Archive -Path $evidenceFile, $statusFile, $metadataFile -DestinationPath $exportZip -Force
 
 Write-Host "External validation evidence written to $evidenceFile"
+Write-Host "External validation metadata written to $metadataFile"
 Write-Host "External validation export written to $exportZip"

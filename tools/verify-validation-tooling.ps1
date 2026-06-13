@@ -131,6 +131,9 @@ try {
     New-Item -ItemType Directory -Force -Path $zipSourceRoot | Out-Null
     Copy-Item -LiteralPath $importSource -Destination (Join-Path $zipSourceRoot "external-validation.json")
     "validation tooling zip import status" | Set-Content (Join-Path $zipSourceRoot "validation-status.md")
+    @{ generatedAt = Get-Date -Format o; source = "validation tooling self-test" } |
+        ConvertTo-Json -Depth 3 |
+        Set-Content (Join-Path $zipSourceRoot "validation-run-metadata.json")
     $zipSource = Join-ScratchAbsolute "external-validation-export.zip"
     Compress-Archive -Path (Join-Path $zipSourceRoot "*") -DestinationPath $zipSource -Force
     $zipImportTarget = Join-ScratchAbsolute "zip-import-target.json"
