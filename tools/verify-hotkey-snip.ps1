@@ -11,6 +11,19 @@ if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")
 }
 
+function Get-ClipboardText {
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        try {
+            return Get-Clipboard -Raw -ErrorAction Stop
+        }
+        catch {
+            Start-Sleep -Milliseconds 150
+        }
+    }
+
+    return ""
+}
+
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Drawing
 Add-Type @"
@@ -49,8 +62,14 @@ Add-Type -AssemblyName System.Drawing
 `$form.StartPosition = 'Manual'
 `$form.Location = New-Object Drawing.Point(100,100)
 `$form.Size = New-Object Drawing.Size(900,260)
-`$form.TopMost = `$true
+`$form.TopMost = `$false
 `$form.BackColor = [Drawing.Color]::White
+`$form.Add_Shown({
+    `$form.TopMost = `$true
+    `$form.Activate()
+    `$form.BringToFront()
+    `$form.TopMost = `$false
+})
 `$label = New-Object Windows.Forms.Label
 `$label.Text = '$ExpectedText'
 `$label.Font = New-Object Drawing.Font('Arial', 54, [Drawing.FontStyle]::Bold, [Drawing.GraphicsUnit]::Pixel)
@@ -66,7 +85,10 @@ try {
     Start-Sleep -Seconds 2
     Set-Clipboard -Value "__OCR_SNIP_PENDING__"
     $app = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
-    Start-Sleep -Seconds 3
+    Start-Sleep -Seconds 8
+    if ($app.HasExited) {
+        throw "OcrSnip.App exited before hotkey snip verification. Exit code: $($app.ExitCode)"
+    }
 
     [InputNative]::SendCtrlShiftO()
 
@@ -82,7 +104,7 @@ try {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
         Start-Sleep -Milliseconds 500
-        $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
+        $clipboard = Get-ClipboardText
         if ($clipboard -match [regex]::Escape($ExpectedText)) {
             Write-Host "Hotkey snip verification passed."
             return

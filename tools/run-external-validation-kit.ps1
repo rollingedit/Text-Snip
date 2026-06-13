@@ -94,10 +94,23 @@ function Assert-GatePassed($Data, [string]$Gate, [string]$Message) {
     }
 }
 
+function Get-ClipboardText {
+    for ($attempt = 1; $attempt -le 10; $attempt++) {
+        try {
+            return Get-Clipboard -Raw -ErrorAction Stop
+        }
+        catch {
+            Start-Sleep -Milliseconds 150
+        }
+    }
+
+    return ""
+}
+
 function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5) {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
-        $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
+        $clipboard = Get-ClipboardText
         if ($clipboard -match [regex]::Escape($ExpectedText)) {
             return $true
         }
@@ -124,6 +137,11 @@ function Invoke-AppSelfTests {
     $script:appSelfTestClipboardObserved = Wait-ClipboardContains "OCR TEST"
     if (!$script:appSelfTestClipboardObserved) {
         Write-Warning "OCR self-test process exited successfully, but the runner did not observe expected clipboard text afterward. Continuing; desktop hotkey validation is the end-to-end clipboard gate when requested."
+    }
+
+    $hotkey = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey" -Wait -PassThru -WindowStyle Hidden
+    if ($hotkey.ExitCode -ne 0) {
+        throw "Hotkey self-test failed with exit code $($hotkey.ExitCode)."
     }
 }
 
@@ -182,8 +200,14 @@ Add-Type -AssemblyName System.Drawing
 `$form.StartPosition = 'Manual'
 `$form.Location = New-Object Drawing.Point(100,100)
 `$form.Size = New-Object Drawing.Size(900,260)
-`$form.TopMost = `$true
+`$form.TopMost = `$false
 `$form.BackColor = [Drawing.Color]::White
+`$form.Add_Shown({
+    `$form.TopMost = `$true
+    `$form.Activate()
+    `$form.BringToFront()
+    `$form.TopMost = `$false
+})
 `$label = New-Object Windows.Forms.Label
 `$label.Text = '$ExpectedText'
 `$label.Font = New-Object Drawing.Font('Arial', 54, [Drawing.FontStyle]::Bold, [Drawing.GraphicsUnit]::Pixel)
@@ -206,7 +230,10 @@ Add-Type -AssemblyName System.Drawing
         }
         else {
             $app = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
-            Start-Sleep -Seconds 6
+            Start-Sleep -Seconds 12
+            if ($app.HasExited) {
+                throw "OcrSnip.App exited before desktop hotkey validation. Exit code: $($app.ExitCode)"
+            }
         }
 
         for ($attempt = 1; $attempt -le 2; $attempt++) {
@@ -224,7 +251,7 @@ Add-Type -AssemblyName System.Drawing
             $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
             do {
                 Start-Sleep -Milliseconds 500
-                $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
+                $clipboard = Get-ClipboardText
                 if ($clipboard -match [regex]::Escape($ExpectedText)) {
                     return
                 }

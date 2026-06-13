@@ -88,6 +88,9 @@ file static class SelfTestCommand
                 case "--self-test-startup":
                     RunStartupTest();
                     break;
+                case "--self-test-hotkey":
+                    await RunHotkeyTestAsync().ConfigureAwait(true);
+                    break;
             }
         }
         finally
@@ -133,6 +136,102 @@ file static class SelfTestCommand
 
         StartupRegistration.Apply(false);
         Environment.ExitCode = StartupRegistration.IsRegistered(Environment.ProcessPath) ? 6 : 0;
+    }
+
+    private static async Task RunHotkeyTestAsync()
+    {
+        var received = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var hotkey = new HotkeyService(HotkeyDefinition.Default, () => received.TrySetResult());
+        if (!hotkey.TryRegister())
+        {
+            Environment.ExitCode = 7;
+            return;
+        }
+
+        HotkeySelfTestInput.SendCtrlShiftO();
+        var completed = await Task.WhenAny(received.Task, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(true);
+        Environment.ExitCode = completed == received.Task ? 0 : 8;
+    }
+}
+
+file static class HotkeySelfTestInput
+{
+    public static void SendCtrlShiftO()
+    {
+        var inputs = new Input[6];
+        inputs[0].Type = 1;
+        inputs[0].Union.Keyboard.VirtualKey = 0x11;
+        inputs[1].Type = 1;
+        inputs[1].Union.Keyboard.VirtualKey = 0x10;
+        inputs[2].Type = 1;
+        inputs[2].Union.Keyboard.VirtualKey = 0x4F;
+        inputs[3].Type = 1;
+        inputs[3].Union.Keyboard.VirtualKey = 0x4F;
+        inputs[3].Union.Keyboard.Flags = 0x0002;
+        inputs[4].Type = 1;
+        inputs[4].Union.Keyboard.VirtualKey = 0x10;
+        inputs[4].Union.Keyboard.Flags = 0x0002;
+        inputs[5].Type = 1;
+        inputs[5].Union.Keyboard.VirtualKey = 0x11;
+        inputs[5].Union.Keyboard.Flags = 0x0002;
+
+        var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+        if (sent != inputs.Length)
+        {
+            Environment.ExitCode = 9;
+        }
+    }
+
+    [DllImport("user32.dll", SetLastError = true)]
+    private static extern uint SendInput(uint inputCount, Input[] inputs, int inputSize);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Input
+    {
+        public uint Type;
+        public InputUnion Union;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    private struct InputUnion
+    {
+        [FieldOffset(0)]
+        public MouseInput Mouse;
+
+        [FieldOffset(0)]
+        public KeyboardInput Keyboard;
+
+        [FieldOffset(0)]
+        public HardwareInput Hardware;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MouseInput
+    {
+        public int X;
+        public int Y;
+        public uint MouseData;
+        public uint Flags;
+        public uint Time;
+        public UIntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KeyboardInput
+    {
+        public ushort VirtualKey;
+        public ushort ScanCode;
+        public uint Flags;
+        public uint Time;
+        public UIntPtr ExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct HardwareInput
+    {
+        public uint Message;
+        public ushort ParamLow;
+        public ushort ParamHigh;
     }
 }
 
