@@ -22,12 +22,12 @@ public sealed class SnipWorkflow
     private readonly SemaphoreSlim _gate = new(1, 1);
     private readonly System.Threading.Timer _unloadTimer;
 
-    public SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine)
+    public SnipWorkflow(SettingsStore settingsStore, AppSettings settings, OcrEngine ocrEngine, ISnipSelectionService? selection = null)
         : this(
             settingsStore,
             settings,
             new OcrEngineAdapter(ocrEngine),
-            new OverlaySelectionService(),
+            selection ?? new OverlaySelectionService(),
             new GdiScreenCaptureService(),
             new WpfClipboardWriter(),
             new ToastWindowService(),
@@ -207,6 +207,11 @@ file sealed class OcrEngineAdapter(OcrEngine engine) : IWorkflowOcrEngine
 file sealed class OverlaySelectionService : ISnipSelectionService
 {
     public Int32Rect? SelectRectangle() => OverlayWindow.SelectRectangle();
+}
+
+public sealed class FixedSelectionService(Int32Rect rectangle) : ISnipSelectionService
+{
+    public Int32Rect? SelectRectangle() => rectangle;
 }
 
 file sealed class GdiScreenCaptureService : IScreenCaptureService

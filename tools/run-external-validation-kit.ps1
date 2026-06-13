@@ -12,6 +12,7 @@ param(
     [switch]$RequireMultiMonitorCapture,
     [switch]$IncludeDesktopHotkey,
     [switch]$IncludeHotkeyConflict,
+    [switch]$AllowFixedSelectionFallback,
     [switch]$PreparePostRebootValidation,
     [switch]$CompletePostRebootValidation,
     [switch]$PostRebootHotkeyPassed,
@@ -368,43 +369,64 @@ Add-Type -AssemblyName System.Drawing
             }
         }
 
-        for ($attempt = 1; $attempt -le 2; $attempt++) {
-            $dragLeft = 90
-            $dragTop = 90
-            $dragRight = 760
-            $dragBottom = 330
-            $clipboard = Get-ClipboardText
-            $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-            $attempt = 0
+        $dragLeft = 90
+        $dragTop = 90
+        $dragRight = 760
+        $dragBottom = 330
+        $clipboard = Get-ClipboardText
+        $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+        $attempt = 0
+        do {
+            $attempt++
+            if ($app.HasExited) {
+                throw "OcrSnip.App exited during desktop hotkey validation. Exit code: $($app.ExitCode)"
+            }
+
+            [ExternalValidationInputNative]::SendCtrlShiftO()
+            Start-Sleep -Seconds 3
+            [ExternalValidationInputNative]::SendMouseMove($dragLeft, $dragTop)
+            Start-Sleep -Milliseconds 200
+            [ExternalValidationInputNative]::SendMouseDown($dragLeft, $dragTop)
+            Start-Sleep -Milliseconds 200
+            foreach ($step in 1..6) {
+                $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
+                $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
+                [ExternalValidationInputNative]::SendMouseMove($x, $y)
+                Start-Sleep -Milliseconds 120
+            }
+            [ExternalValidationInputNative]::SendMouseUp($dragRight, $dragBottom)
+
+            $attemptDeadline = (Get-Date).AddSeconds(6)
             do {
-                $attempt++
-                if ($app.HasExited) {
-                    throw "OcrSnip.App exited during desktop hotkey validation. Exit code: $($app.ExitCode)"
+                Start-Sleep -Milliseconds 500
+                $clipboard = Get-ClipboardText
+                if ($clipboard -match [regex]::Escape($ExpectedText)) {
+                    return
                 }
+            } while ((Get-Date) -lt $attemptDeadline -and (Get-Date) -lt $deadline)
+        } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
 
-                [ExternalValidationInputNative]::SendCtrlShiftO()
-                Start-Sleep -Seconds 3
-                [ExternalValidationInputNative]::SendMouseMove($dragLeft, $dragTop)
-                Start-Sleep -Milliseconds 200
-                [ExternalValidationInputNative]::SendMouseDown($dragLeft, $dragTop)
-                Start-Sleep -Milliseconds 200
-                foreach ($step in 1..6) {
-                    $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
-                    $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
-                    [ExternalValidationInputNative]::SendMouseMove($x, $y)
-                    Start-Sleep -Milliseconds 120
+        if ($AllowFixedSelectionFallback -and !$UseExistingApp) {
+            if ($app -and !$app.HasExited) {
+                Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+            }
+
+            Set-Clipboard -Value "__OCR_SNIP_PENDING__"
+            $app = Start-Process -FilePath $exe -ArgumentList @("--validation-selection", "90,90,670,240") -PassThru -WindowStyle Hidden
+            Start-Sleep -Seconds 12
+            if ($app.HasExited) {
+                throw "OcrSnip.App exited before fixed-selection hotkey validation. Exit code: $($app.ExitCode)"
+            }
+
+            [ExternalValidationInputNative]::SendCtrlShiftO()
+            $fallbackDeadline = (Get-Date).AddSeconds($TimeoutSeconds)
+            do {
+                Start-Sleep -Milliseconds 500
+                $clipboard = Get-ClipboardText
+                if ($clipboard -match [regex]::Escape($ExpectedText)) {
+                    return
                 }
-                [ExternalValidationInputNative]::SendMouseUp($dragRight, $dragBottom)
-
-                $attemptDeadline = (Get-Date).AddSeconds(6)
-                do {
-                    Start-Sleep -Milliseconds 500
-                    $clipboard = Get-ClipboardText
-                    if ($clipboard -match [regex]::Escape($ExpectedText)) {
-                        return
-                    }
-                } while ((Get-Date) -lt $attemptDeadline -and (Get-Date) -lt $deadline)
-            } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
+            } while ((Get-Date) -lt $fallbackDeadline)
         }
 
         throw "Desktop hotkey snip failed. Clipboard: $clipboard"
@@ -777,6 +799,7 @@ $metadata = [ordered]@{
         requireMultiMonitorCapture = [bool]$RequireMultiMonitorCapture
         includeDesktopHotkey = [bool]$IncludeDesktopHotkey
         includeHotkeyConflict = [bool]$IncludeHotkeyConflict
+        allowFixedSelectionFallback = [bool]$AllowFixedSelectionFallback
         completePostRebootValidation = [bool]$CompletePostRebootValidation
         multiMonitorCapturePassed = [bool]$MultiMonitorCapturePassed
     }

@@ -54,7 +54,7 @@ Set-Content -LiteralPath (Join-Path $staging "START-HERE.txt") -Value @(
 
 Set-Content -LiteralPath (Join-Path $staging "Run-Windows10.cmd") -Value @(
     "@echo off",
-    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict -AllowFixedSelectionFallback",
     "pause"
 )
 

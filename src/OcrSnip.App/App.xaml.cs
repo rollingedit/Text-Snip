@@ -42,7 +42,7 @@ public partial class App : System.Windows.Application
         var settings = settingsStore.Load();
         StartupRegistration.Apply(settings.LaunchAtLogin);
         _ocrEngine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
-        _workflow = new SnipWorkflow(settingsStore, settings, _ocrEngine);
+        _workflow = new SnipWorkflow(settingsStore, settings, _ocrEngine, ValidationSelection.TryParse(e.Args));
         _hotkeyService = new HotkeyService(settings.Hotkey, () => _ = _workflow.StartSnipAsync());
         _trayIcon = new TrayIconService(_workflow, () => Shutdown());
         _trayIcon.Show();
@@ -60,6 +60,36 @@ public partial class App : System.Windows.Application
         _ocrEngine?.Dispose();
         _mutex?.Dispose();
         base.OnExit(e);
+    }
+}
+
+file static class ValidationSelection
+{
+    public static ISnipSelectionService? TryParse(string[] args)
+    {
+        for (var index = 0; index < args.Length - 1; index++)
+        {
+            if (!args[index].Equals("--validation-selection", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var parts = args[index + 1].Split(',', StringSplitOptions.TrimEntries);
+            if (parts.Length != 4 ||
+                !int.TryParse(parts[0], out var x) ||
+                !int.TryParse(parts[1], out var y) ||
+                !int.TryParse(parts[2], out var width) ||
+                !int.TryParse(parts[3], out var height) ||
+                width <= 0 ||
+                height <= 0)
+            {
+                return null;
+            }
+
+            return new FixedSelectionService(new Int32Rect(x, y, width, height));
+        }
+
+        return null;
     }
 }
 
