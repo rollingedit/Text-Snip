@@ -419,13 +419,7 @@ Add-Type -AssemblyName System.Drawing
             Stop-ExistingOcrSnipApp
 
             Set-Clipboard -Value "__OCR_SNIP_PENDING__"
-            $app = Start-Process -FilePath $exe -ArgumentList @("--validation-selection", "90,90,670,240") -PassThru -WindowStyle Hidden
-            Start-Sleep -Seconds 12
-            if ($app.HasExited) {
-                throw "OcrSnip.App exited before fixed-selection hotkey validation. Exit code: $($app.ExitCode)"
-            }
-
-            [ExternalValidationInputNative]::SendCtrlShiftO()
+            $app = Start-Process -FilePath $exe -ArgumentList @("--self-test-fixed-selection", "90,90,670,240") -PassThru -WindowStyle Hidden
             $fallbackDeadline = (Get-Date).AddSeconds($TimeoutSeconds)
             do {
                 Start-Sleep -Milliseconds 500
@@ -433,7 +427,18 @@ Add-Type -AssemblyName System.Drawing
                 if ($clipboard -match [regex]::Escape($ExpectedText)) {
                     return
                 }
-            } while ((Get-Date) -lt $fallbackDeadline)
+
+                if ($app.HasExited -and $app.ExitCode -ne 0) {
+                    throw "OcrSnip.App fixed-selection validation failed with exit code $($app.ExitCode). Clipboard: $clipboard"
+                }
+            } while ((Get-Date) -lt $fallbackDeadline -and !$app.HasExited)
+
+            if (!$app.HasExited) {
+                Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+                throw "OcrSnip.App fixed-selection validation timed out. Clipboard: $clipboard"
+            }
+
+            throw "OcrSnip.App fixed-selection validation exited without expected clipboard text. Exit code: $($app.ExitCode). Clipboard: $clipboard"
         }
 
         throw "Desktop hotkey snip failed. Clipboard: $clipboard"

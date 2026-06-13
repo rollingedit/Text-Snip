@@ -108,7 +108,7 @@ file static class SelfTestCommand
 
     private static bool IsSelfTestCommand(string command)
     {
-        return command is "--self-test-ocr" or "--self-test-startup" or "--self-test-hotkey" or "--self-test-hotkey-listener";
+        return command is "--self-test-ocr" or "--self-test-startup" or "--self-test-hotkey" or "--self-test-hotkey-listener" or "--self-test-fixed-selection";
     }
 
     private static async Task RunAsync(string[] args, Action shutdown)
@@ -128,6 +128,9 @@ file static class SelfTestCommand
                     break;
                 case "--self-test-hotkey-listener":
                     await RunHotkeyListenerTestAsync().ConfigureAwait(true);
+                    break;
+                case "--self-test-fixed-selection":
+                    await RunFixedSelectionTestAsync(args).ConfigureAwait(true);
                     break;
             }
         }
@@ -162,6 +165,28 @@ file static class SelfTestCommand
         }
 
         Environment.ExitCode = ClipboardService.TrySetText(result.Text, out _) ? 0 : 4;
+    }
+
+    private static async Task RunFixedSelectionTestAsync(string[] args)
+    {
+        if (args.Length < 2)
+        {
+            Environment.ExitCode = 13;
+            return;
+        }
+
+        var selection = ValidationSelection.TryParse(["--validation-selection", args[1]]);
+        if (selection is null)
+        {
+            Environment.ExitCode = 13;
+            return;
+        }
+
+        var settingsStore = new SettingsStore();
+        var settings = settingsStore.Load();
+        using var engine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
+        var workflow = new SnipWorkflow(settingsStore, settings, engine, selection);
+        await workflow.StartSnipAsync().ConfigureAwait(true);
     }
 
     private static void RunStartupTest()
