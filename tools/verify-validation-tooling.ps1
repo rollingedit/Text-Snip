@@ -61,6 +61,7 @@ try {
         "export-external-validation.ps1",
         "create-external-validation-kit.ps1",
         "create-external-validation-iso.ps1",
+        "start-virtualbox-validation.ps1",
         "verify-external-validation-kit.ps1",
         "run-external-validation-kit.ps1",
         "invoke-external-validation-profile.ps1",
