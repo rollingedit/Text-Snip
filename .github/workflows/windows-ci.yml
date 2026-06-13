@@ -52,6 +52,10 @@ jobs:
         shell: pwsh
         run: ./tools/verify-external-validation-kit.ps1 -RunLocalSelfTest
 
+      - name: Create external validation ISO
+        shell: pwsh
+        run: ./tools/create-external-validation-iso.ps1
+
       - name: Upload portable artifact
         uses: actions/upload-artifact@v4
         with:
@@ -63,6 +67,12 @@ jobs:
         with:
           name: OcrSnip-ExternalValidationKit
           path: artifacts/publish/OcrSnip-ExternalValidationKit.zip
+
+      - name: Upload external validation ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: OcrSnip-ExternalValidationKit-ISO
+          path: artifacts/publish/OcrSnip-ExternalValidationKit.iso
 
       - name: Upload checksums
         uses: actions/upload-artifact@v4

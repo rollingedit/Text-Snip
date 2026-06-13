@@ -46,6 +46,7 @@ Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "asset
 & (Join-Path $PSScriptRoot "publish.ps1") -Configuration $Configuration
 & (Join-Path $PSScriptRoot "create-external-validation-kit.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-external-validation-kit.ps1") -RunLocalSelfTest | Out-Null
+& (Join-Path $PSScriptRoot "create-external-validation-iso.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "measure-memory.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-signing-status.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-app-selftests.ps1") | Out-Null
@@ -71,6 +72,7 @@ Assert-Exists (Join-Path $publishDir "models/ppocrv6-small-rec/inference.onnx")
 Assert-Exists (Join-Path $publishDir "licenses/ONNXRuntime-MIT.txt")
 Assert-Exists (Join-Path $publishDir "licenses/PaddleOCR-PP-OCRv6-Apache-2.0.txt")
 Assert-Exists $zipPath
+Assert-Exists (Join-Path $repoRoot "artifacts/publish/OcrSnip-ExternalValidationKit.iso")
 Assert-ZipEntry $zipPath "OcrSnip.App.exe"
 Assert-ZipEntry $zipPath "models/ppocrv6-small-det/inference.onnx"
 Assert-ZipEntry $zipPath "models/ppocrv6-small-rec/inference.onnx"
