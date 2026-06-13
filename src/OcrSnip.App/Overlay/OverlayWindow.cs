@@ -23,8 +23,15 @@ public sealed class OverlayWindow : Window
         Background = System.Windows.Media.Brushes.Transparent;
         Topmost = true;
         ShowInTaskbar = false;
+        Focusable = true;
         Cursor = System.Windows.Input.Cursors.Cross;
         Content = _canvas;
+        Loaded += (_, _) =>
+        {
+            Activate();
+            Focus();
+            Keyboard.Focus(this);
+        };
         KeyDown += (_, e) =>
         {
             if (e.Key == Key.Escape)

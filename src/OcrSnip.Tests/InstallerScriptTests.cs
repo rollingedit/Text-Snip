@@ -27,10 +27,14 @@ public sealed class InstallerScriptTests
         var script = File.ReadAllText(GetRepoPath("installer", "OcrSnip.iss"));
 
         Assert.Contains("#define MyAppName \"Text Snip\"", script);
-        Assert.Contains("#define MyAppVersion \"1.0.0\"", script);
+        Assert.Contains("#define MyAppVersion \"1.1\"", script);
         Assert.Contains("OutputBaseFilename=Text-Snip-Setup-x64", script);
+        Assert.Contains("Name: \"desktopicon\"; Description: \"Create a desktop shortcut\"; GroupDescription: \"Additional shortcuts:\"; Flags: dontinheritcheck", script);
+        Assert.Contains("Name: \"launchatlogin\"; Description: \"Start Text Snip at startup\"; GroupDescription: \"Startup:\"; Flags: dontinheritcheck", script);
+        Assert.Contains("Name: \"resetuserdata\"; Description: \"Reset Text Snip settings and logs\"; GroupDescription: \"Repair options:\"; Flags: unchecked dontinheritcheck", script);
         Assert.Contains("Description: \"Start Text Snip at startup\"", script);
         Assert.Contains("Description: \"Launch Text Snip\"", script);
+        Assert.DoesNotContain("checkedonce", script);
         Assert.Contains("ArchitecturesAllowed=x64compatible", script);
         Assert.Contains("ArchitecturesInstallIn64BitMode=x64compatible", script);
         Assert.DoesNotContain("when I sign in", script);

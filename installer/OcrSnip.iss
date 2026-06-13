@@ -2,7 +2,7 @@
 #define MyAppExeName "OcrSnip.App.exe"
 #define MyAppVersion GetEnv("OCRSNIP_VERSION")
 #if MyAppVersion == ""
-  #define MyAppVersion "1.0.0"
+  #define MyAppVersion "1.1"
 #endif
 
 [Setup]
@@ -22,9 +22,9 @@ PrivilegesRequired=lowest
 UninstallDisplayIcon={app}\{#MyAppExeName}
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checkedonce
-Name: "launchatlogin"; Description: "Start Text Snip at startup"; GroupDescription: "Startup:"; Flags: checkedonce
-Name: "resetuserdata"; Description: "Reset Text Snip settings and logs"; GroupDescription: "Repair options:"; Flags: unchecked
+Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: dontinheritcheck
+Name: "launchatlogin"; Description: "Start Text Snip at startup"; GroupDescription: "Startup:"; Flags: dontinheritcheck
+Name: "resetuserdata"; Description: "Reset Text Snip settings and logs"; GroupDescription: "Repair options:"; Flags: unchecked dontinheritcheck
 
 [Files]
 Source: "..\artifacts\publish\OcrSnip\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

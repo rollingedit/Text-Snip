@@ -1,14 +1,14 @@
 # Text Snip
 
-Native OCR snipping for Windows. Press `Win+Shift+O`, drag over text, release, and Text Snip copies it to your clipboard.
+Native OCR snipping for Windows with a custom layout formatter. Press `Win+Shift+O`, drag over text, release, and Text Snip copies formatted text to your clipboard.
 
-Windows OCR sucks. Phones made it easy: select text from anything, copy it. Text Snip brings that mobile-native OCR experience to Windows as a fast shortcut with local recognition and much better accuracy.
+Windows OCR sucks. Phones made it easy: select text from anything, copy it. Text Snip brings that mobile-native OCR experience to Windows and goes further with local recognition plus a custom formatter that turns OCR boxes into usable clipboard text instead of raw OCR output.
 
 ## Why It Exists
 
 Copying text from images, screenshots, videos, PDFs, remote desktops, installers, error dialogs, and locked-down websites should be instant, but such a tool does not exist with speed, ease of use, and accuracy.
 
-Text Snip fixes that with a native shortcut:
+Text Snip fixes that with a native shortcut and formatter built for messy real-world captures:
 
 ```text id="run-flow"
 press one hotkey
@@ -16,7 +16,7 @@ drag the area you care about
 paste the result
 ```
 
-Everything needed for OCR ships with the app. Recognition runs locally on CPU using bundled small ONNX OCR models.
+Everything needed for OCR ships with the app. Recognition runs locally on CPU using bundled small ONNX OCR models, then Text Snip reconstructs readable clipboard text from the OCR boxes instead of dumping raw model output.
 
 Screenshots are captured in memory and not saved by Text Snip.
 
@@ -27,7 +27,32 @@ Screenshots are captured in memory and not saved by Text Snip.
 * **Local and private**: OCR runs on the machine with bundled models.
 * **Fast install**: one normal Windows installer, no zip workflow, no Python environment, no model download.
 * **Real OCR pipeline**: bundled [PP-OCRv6 small detector](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx) and [PP-OCRv6 small recognizer](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx) ONNX models through [ONNX Runtime](https://github.com/microsoft/onnxruntime), with [OpenCvSharp](https://github.com/shimat/opencvsharp) / [OpenCV](https://github.com/opencv/opencv) for image preprocessing and [Clipper2](https://github.com/AngusJohnson/Clipper2) for OCR text-box geometry.
+* **Custom layout formatter**: Text Snip rebuilds reading order, rows, columns, wrapped lines, list markers, spacing, punctuation, and section breaks.
 * **Repairable installer**: reinstalling replaces stale app files and shortcuts; optional reset clears Text Snip settings/logs.
+
+## How It Works
+
+Text Snip captures the selected screen area, preprocesses the image, runs local OCR, and applies its own layout formatter before copying the result.
+
+The detector finds text regions. The recognizer reads the characters. Text Snip then uses the detected geometry to preserve the original structure. This is custom code in Text Snip, not a default OCR dump.
+
+The formatter handles:
+
+* top-to-bottom reading order, including centered and chat-like captures;
+* same-row fragment joining;
+* paragraph breaks, section gaps, and wrapped lines;
+* bullets, numbered lists, hollow bullets, and OCR bullet encoding cleanup;
+* dense navigation text where OCR may pack separate words together;
+* two-column cards, menus, price columns, release notes, tables, and app screens;
+* punctuation spacing cleanup.
+
+This matters because OCR models return text boxes, not polished clipboard text. Text Snip turns those boxes into something you can paste and use.
+
+## Practical Limits
+
+Text Snip is built for real Windows snipping, not perfect document reconstruction. OCR quality still depends on the selected image: blur, tiny text, glare, unusual fonts, handwriting, rotated text, low contrast, and partial selections can reduce accuracy. The formatter improves layout, but it cannot recover words the OCR model did not read or boxes the detector did not find.
+
+For best results, drag slightly outside the text instead of clipping letters at the border.
 
 ## Latest Release
 
@@ -59,7 +84,7 @@ The installer does not add a driver, service, browser extension, shell extension
 
 Optional installer choices:
 
-* **Start Text Snip at startup**: on by default.
+* **Start Text Snip at startup**: off by default, available as an installer option.
 * **Reset Text Snip settings and logs**: off by default, useful for repair installs.
 
 ## Use
@@ -123,7 +148,6 @@ installer\Output\Text-Snip-Setup-x64.exe
 
 ## Links
 
-* PaddleOCR: https://github.com/PaddlePaddle/PaddleOCR
 * PP-OCRv6 small detector ONNX model: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx
 * PP-OCRv6 small recognizer ONNX model: https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx
 * Installer sources: https://github.com/rollingedit/Text-Snip/tree/main/installer
@@ -140,11 +164,12 @@ Published builds include third-party license files under `licenses\`, and the re
 
 Bundled/runtime components include:
 
-* [PaddleOCR](https://github.com/PaddlePaddle/PaddleOCR): Apache License 2.0
 * [PP-OCRv6 small detector ONNX model](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx): Apache License 2.0
 * [PP-OCRv6 small recognizer ONNX model](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx): Apache License 2.0
 * [ONNX Runtime](https://github.com/microsoft/onnxruntime): MIT
 * [OpenCvSharp](https://github.com/shimat/opencvsharp) / [OpenCV](https://github.com/opencv/opencv): Apache License 2.0 for the packages used here; used for image handling and preprocessing before OCR
 * [Clipper2](https://github.com/AngusJohnson/Clipper2): Boost Software License 1.0; used for polygon/text-box geometry during OCR post-processing
+
+Text Snip bundles the PP-OCRv6 ONNX model files/configs.
 
 Redistributed builds must follow GPLv3 terms and keep the included third-party license notices.

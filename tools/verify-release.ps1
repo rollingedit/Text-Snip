@@ -76,7 +76,7 @@ Assert-Exists (Join-Path $publishDir "OpenCvSharpExtern.dll")
 Assert-Exists (Join-Path $publishDir "models/ppocrv6-small-det/inference.onnx")
 Assert-Exists (Join-Path $publishDir "models/ppocrv6-small-rec/inference.onnx")
 Assert-Exists (Join-Path $publishDir "licenses/ONNXRuntime-MIT.txt")
-Assert-Exists (Join-Path $publishDir "licenses/PaddleOCR-PP-OCRv6-Apache-2.0.txt")
+Assert-Exists (Join-Path $publishDir "licenses/PP-OCRv6-ONNX-Apache-2.0.txt")
 Assert-Exists $zipPath
 Assert-Exists (Join-Path $repoRoot "artifacts/publish/OcrSnip-ExternalValidationKit.iso")
 Assert-ZipEntry $zipPath "OcrSnip.App.exe"
