@@ -52,6 +52,48 @@ function New-Evidence([string[]]$PassedGates) {
     return $data
 }
 
+function New-Metadata {
+    return [ordered]@{
+        generatedAt = Get-Date -Format o
+        os = [ordered]@{
+            caption = "Microsoft Windows 10 Pro"
+            version = "10.0.19045"
+            architecture = "64-bit"
+        }
+        cpu = [ordered]@{
+            manufacturer = "GenuineIntel"
+            name = "Validation Tooling CPU"
+        }
+        process = [ordered]@{
+            elevatedAdministrator = $false
+            is64BitProcess = $true
+            is64BitOperatingSystem = $true
+        }
+        display = [ordered]@{
+            screenCount = 1
+            dpiScales = @(100)
+            mixedDpi = $false
+            hasNegativeVirtualMonitor = $false
+            screens = @()
+        }
+        requestedChecks = [ordered]@{
+            expectedWindows = "Windows10"
+            expectedCpuVendor = ""
+            expectedDpiScale = 0
+            includeDesktopHotkey = $false
+            includeHotkeyConflict = $false
+        }
+        completedChecks = [ordered]@{
+            appSelfTests = $true
+            idleNoNetwork = $true
+            desktopHotkey = $false
+            hotkeyConflict = $false
+            postRebootHotkey = $false
+            multiMonitorCapture = $false
+        }
+    }
+}
+
 try {
     $scriptsToParse = @(
         "verify-ship-readiness.ps1",
@@ -133,7 +175,7 @@ try {
     New-Item -ItemType Directory -Force -Path $zipSourceRoot | Out-Null
     Copy-Item -LiteralPath $importSource -Destination (Join-Path $zipSourceRoot "external-validation.json")
     "validation tooling zip import status" | Set-Content (Join-Path $zipSourceRoot "validation-status.md")
-    @{ generatedAt = Get-Date -Format o; source = "validation tooling self-test" } |
+    New-Metadata |
         ConvertTo-Json -Depth 3 |
         Set-Content (Join-Path $zipSourceRoot "validation-run-metadata.json")
     $zipSource = Join-ScratchAbsolute "external-validation-export.zip"
@@ -145,6 +187,18 @@ try {
     if ($zipImported.($gates[0]).passed -ne $true) {
         throw "ZIP import target did not include the expected passed gate."
     }
+
+    $badMetadataRoot = Join-ScratchAbsolute "bad-metadata-zip-source"
+    New-Item -ItemType Directory -Force -Path $badMetadataRoot | Out-Null
+    Copy-Item -LiteralPath $importSource -Destination (Join-Path $badMetadataRoot "external-validation.json")
+    "validation tooling bad metadata status" | Set-Content (Join-Path $badMetadataRoot "validation-status.md")
+    $badMetadata = New-Metadata
+    $badMetadata.os.version = "10.0.22631"
+    $badMetadata.os.caption = "Microsoft Windows 11 Pro"
+    $badMetadata | ConvertTo-Json -Depth 6 | Set-Content (Join-Path $badMetadataRoot "validation-run-metadata.json")
+    $badMetadataZip = Join-ScratchAbsolute "external-validation-bad-metadata.zip"
+    Compress-Archive -Path (Join-Path $badMetadataRoot "*") -DestinationPath $badMetadataZip -Force
+    Assert-Throws { & (Join-Path $PSScriptRoot "import-external-validation.ps1") -SourcePath $badMetadataZip -EvidencePath (Join-Scratch "bad-metadata-target.json") } "metadata does not support gate 'windows10x64'"
 
     $statusPath = Join-ScratchAbsolute "status.md"
     & (Join-Path $PSScriptRoot "write-validation-status.ps1") -EvidencePath (Join-Scratch "complete.json") -OutputPath (Join-Scratch "status.md")
