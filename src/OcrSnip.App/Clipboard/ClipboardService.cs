@@ -11,29 +11,26 @@ public static class ClipboardService
         Exception? lastError = null;
         for (var attempt = 0; attempt < 10; attempt++)
         {
+            if (TrySetUnicodeTextNative(text, out error))
+            {
+                return true;
+            }
+
+            lastError = error;
+
             try
             {
                 System.Windows.Clipboard.SetText(text, System.Windows.TextDataFormat.UnicodeText);
                 System.Windows.Clipboard.Flush();
-                if (TrySetUnicodeTextNative(text, out error))
-                {
-                    return true;
-                }
-
-                lastError = error;
-                Thread.Sleep(50);
+                error = null;
+                return true;
             }
             catch (Exception ex)
             {
                 lastError = ex;
-                if (TrySetUnicodeTextNative(text, out error))
-                {
-                    return true;
-                }
-
-                lastError = error ?? lastError;
-                Thread.Sleep(50);
             }
+
+            Thread.Sleep(50);
         }
 
         error = lastError ?? new InvalidOperationException("Clipboard busy.");
