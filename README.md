@@ -1,6 +1,6 @@
 # OCR Snip
 
-Press `Ctrl+Shift+O`, drag over text, and release. OCR Snip copies recognized text to your clipboard.
+Press `Win+Shift+O`, drag over text, and release. OCR Snip copies recognized text to your clipboard.
 
 ## Features
 

@@ -107,16 +107,16 @@ function Assert-MetadataSupportsGate([string]$Gate, $Metadata) {
             if ("$($Metadata.cpu.manufacturer) $($Metadata.cpu.name)" -notmatch "Intel|GenuineIntel") {
                 throw "Validation metadata does not support gate 'intelModelLoad'."
             }
-            if ($Metadata.completedChecks.appSelfTests -ne $true) {
-                throw "Validation metadata does not show app self-tests for gate 'intelModelLoad'."
+            if ($Metadata.completedChecks.ocrFixtureVerification -ne $true) {
+                throw "Validation metadata does not show OCR fixture verification for gate 'intelModelLoad'."
             }
         }
         "amdModelLoad" {
             if ("$($Metadata.cpu.manufacturer) $($Metadata.cpu.name)" -notmatch "AMD") {
                 throw "Validation metadata does not support gate 'amdModelLoad'."
             }
-            if ($Metadata.completedChecks.appSelfTests -ne $true) {
-                throw "Validation metadata does not show app self-tests for gate 'amdModelLoad'."
+            if ($Metadata.completedChecks.ocrFixtureVerification -ne $true) {
+                throw "Validation metadata does not show OCR fixture verification for gate 'amdModelLoad'."
             }
         }
         "dpi100" {

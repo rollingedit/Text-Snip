@@ -309,7 +309,7 @@ $fixtures = @(
     ) "White" @("Privacy", "verified") @("COPY", "MODE") $true $false),
     (Fixture "overlapping_small_label" "Hotkey conflict detected" 920 260 "edge_noise" "small overlapping label near main line" @(
         (TextItem "Hotkey conflict detected" 44 92 42 "Segoe UI" "Black" "Bold")
-        (TextItem "Ctrl+Shift+O" 438 82 16 "Segoe UI" "Gray" "Regular")
+        (TextItem "Win+Shift+O" 438 82 16 "Segoe UI" "Gray" "Regular")
     ) "White" @("Hotkey", "conflict", "detected") @("Ctrl", "Shift") $true $false),
     (Fixture "toolbar_bits_above" "Capture selected region" 880 240 "edge_noise" "icons and tiny labels above selected text" @(
         (TextItem "copy edit save ..." 18 8 14 "Segoe UI" "Gray" "Regular")
@@ -510,7 +510,7 @@ $fixtures = @(
     (Fixture "mixed_size_stack" "Start snip Settings Exit" 860 320 "messy" "large command mixed with small metadata" @(
         (TextItem "Start snip" 24 28 46 "Segoe UI" "Black" "Bold")
         (TextItem "Settings" 34 118 28 "Segoe UI" "Black")
-        (TextItem "Ctrl+Shift+O" 252 124 18 "Segoe UI" "Gray")
+        (TextItem "Win+Shift+O" 252 124 18 "Segoe UI" "Gray")
         (TextItem "Exit" 34 180 28 "Segoe UI" "Black")
         (TextItem "v1 local CPU OCR" 34 250 16 "Segoe UI" "Gray")
     ) "White" @("Start", "snip", "Settings", "Exit") @("v1", "CPU")),

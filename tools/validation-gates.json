@@ -45,7 +45,7 @@
   },
   {
     "id": "postRebootHotkey",
-    "description": "Enable launch at login, reboot, sign in, and verify Ctrl+Shift+O starts a snip."
+    "description": "Enable launch at login, reboot, sign in, and verify Win+Shift+O starts a snip."
   },
   {
     "id": "multiMonitorCapture",
@@ -53,10 +53,10 @@
   },
   {
     "id": "intelModelLoad",
-    "description": "Run OCR self-tests or fixture OCR on an Intel x64 CPU."
+    "description": "Run OCR fixture verification on an Intel x64 CPU."
   },
   {
     "id": "amdModelLoad",
-    "description": "Run OCR self-tests or fixture OCR on an AMD x64 CPU."
+    "description": "Run OCR fixture verification on an AMD x64 CPU."
   }
 ]

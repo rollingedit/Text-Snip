@@ -28,7 +28,9 @@ public sealed class SettingsStore
 
         try
         {
-            return JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath), _jsonOptions) ?? new AppSettings();
+            var settings = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(SettingsPath), _jsonOptions) ?? new AppSettings();
+            MigrateLegacyDefaultHotkey(settings);
+            return settings;
         }
         catch
         {
@@ -40,5 +42,14 @@ public sealed class SettingsStore
     {
         Directory.CreateDirectory(Path.GetDirectoryName(SettingsPath)!);
         File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, _jsonOptions));
+    }
+
+    private static void MigrateLegacyDefaultHotkey(AppSettings settings)
+    {
+        if (settings.Hotkey.Modifiers == (HotkeyModifiers.Control | HotkeyModifiers.Shift) &&
+            settings.Hotkey.Key == 'O')
+        {
+            settings.Hotkey = HotkeyDefinition.Default;
+        }
     }
 }

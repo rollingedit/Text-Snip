@@ -12,7 +12,6 @@ param(
     [switch]$RequireMultiMonitorCapture,
     [switch]$IncludeDesktopHotkey,
     [switch]$IncludeHotkeyConflict,
-    [switch]$AllowFixedSelectionFallback,
     [switch]$AllowHostInputAutomation,
     [switch]$PreparePostRebootValidation,
     [switch]$CompletePostRebootValidation,
@@ -26,6 +25,7 @@ $ErrorActionPreference = "Stop"
 $kitRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $appRoot = Join-Path $kitRoot "OcrSnip"
 $exe = Join-Path $appRoot "OcrSnip.App.exe"
+$ocrCli = Join-Path $kitRoot "OcrCli/OcrSnip.Tools.OcrCli.exe"
 $fixture = Join-Path $kitRoot "Fixtures/simple_text.png"
 $gateManifest = Join-Path $PSScriptRoot "validation-gates.json"
 . (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
@@ -122,7 +122,7 @@ function Set-ValidationSettings {
     New-Item -ItemType Directory -Path $settingsDirectory -Force | Out-Null
     $settings = @{
         Hotkey = @{
-            modifiers = 6
+            modifiers = 12
             key = 79
         }
         MemoryMode = 1
@@ -179,88 +179,32 @@ function Stop-ExistingOcrSnipApp {
     }
 }
 
-$appSelfTestClipboardObserved = $false
+$ocrFixtureTextObserved = $false
 
-function Invoke-AppSelfTests {
+function Invoke-OcrFixtureVerification {
     Stop-ExistingOcrSnipApp
 
-    $startup = Start-Process -FilePath $exe -ArgumentList "--self-test-startup" -Wait -PassThru -WindowStyle Hidden
-    if ($startup.ExitCode -ne 0) {
-        throw "Startup self-test failed with exit code $($startup.ExitCode)."
+    if (!(Test-Path $ocrCli)) {
+        throw "OCR CLI missing from validation kit: $ocrCli"
     }
 
-    $ocr = Start-Process -FilePath $exe -ArgumentList @("--self-test-ocr", $fixture) -Wait -PassThru -WindowStyle Hidden
-    if ($ocr.ExitCode -ne 0) {
-        throw "OCR self-test failed with exit code $($ocr.ExitCode)."
-    }
-
-    $script:appSelfTestClipboardObserved = Wait-ClipboardContains "OCR TEST"
-    if (!$script:appSelfTestClipboardObserved) {
-        Write-Warning "OCR self-test process exited successfully, but the runner did not observe expected clipboard text afterward. Continuing; desktop hotkey validation is the end-to-end clipboard gate when requested."
-    }
-
-    $rendered = Start-Process -FilePath $exe -ArgumentList "--self-test-rendered-selection" -Wait -PassThru
-    if ($rendered.ExitCode -ne 0) {
-        throw "Rendered screen-capture OCR self-test failed with exit code $($rendered.ExitCode)."
-    }
-
-    if (!(Wait-ClipboardContains "OCR TEST")) {
-        throw "Rendered screen-capture OCR self-test exited successfully but clipboard text was not observed."
-    }
-
-    if (!$script:HostInputAutomationUnlocked) {
-        Write-Warning "Skipping hotkey listener self-test because host input automation is locked. Pass -AllowHostInputAutomation or set OCRSNIP_ALLOW_HOST_INPUT_AUTOMATION=1 inside a disposable VM to enable it."
-        return
-    }
-
-    Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public static class ExternalValidationHotkeyListenerInput {
-  [StructLayout(LayoutKind.Sequential)] public struct INPUT { public uint type; public InputUnion u; }
-  [StructLayout(LayoutKind.Explicit)] public struct InputUnion { [FieldOffset(0)] public MOUSEINPUT mi; [FieldOffset(0)] public KEYBDINPUT ki; [FieldOffset(0)] public HARDWAREINPUT hi; }
-  [StructLayout(LayoutKind.Sequential)] public struct MOUSEINPUT { public int dx; public int dy; public uint mouseData; public uint dwFlags; public uint time; public UIntPtr dwExtraInfo; }
-  [StructLayout(LayoutKind.Sequential)] public struct KEYBDINPUT { public ushort wVk; public ushort wScan; public uint dwFlags; public uint time; public UIntPtr dwExtraInfo; }
-  [StructLayout(LayoutKind.Sequential)] public struct HARDWAREINPUT { public uint uMsg; public ushort wParamL; public ushort wParamH; }
-  [DllImport("user32.dll", SetLastError=true)] public static extern uint SendInput(uint cInputs, INPUT[] pInputs, int cbSize);
-  public static void SendCtrlShiftO() {
-    INPUT[] inputs = new INPUT[6];
-    inputs[0].type = 1; inputs[0].u.ki.wVk = 0x11;
-    inputs[1].type = 1; inputs[1].u.ki.wVk = 0x10;
-    inputs[2].type = 1; inputs[2].u.ki.wVk = 0x4F;
-    inputs[3].type = 1; inputs[3].u.ki.wVk = 0x4F; inputs[3].u.ki.dwFlags = 0x0002;
-    inputs[4].type = 1; inputs[4].u.ki.wVk = 0x10; inputs[4].u.ki.dwFlags = 0x0002;
-    inputs[5].type = 1; inputs[5].u.ki.wVk = 0x11; inputs[5].u.ki.dwFlags = 0x0002;
-    uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
-    if (sent != inputs.Length) {
-      throw new InvalidOperationException("SendInput failed for Ctrl+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
-    }
-  }
-}
-"@
-
-    Set-Clipboard -Value "__OCR_SNIP_HOTKEY_PENDING__"
-    $listener = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey-listener" -PassThru
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
     try {
-        Start-Sleep -Seconds 2
-        [ExternalValidationHotkeyListenerInput]::SendCtrlShiftO()
-        if (!$listener.WaitForExit(15000)) {
-            Stop-Process -Id $listener.Id -Force -ErrorAction SilentlyContinue
-            throw "Hotkey listener self-test timed out."
-        }
-
-        if ($listener.ExitCode -ne 0) {
-            throw "Hotkey listener self-test failed with exit code $($listener.ExitCode)."
-        }
-
-        if (!(Wait-ClipboardContains "OCR_SNIP_HOTKEY_OK" 3)) {
-            throw "Hotkey listener self-test exited successfully but clipboard marker was not observed."
-        }
+        $output = & $ocrCli $fixture --model-root (Join-Path $appRoot "models") 2>&1
+        $ocrExitCode = $LASTEXITCODE
     }
     finally {
-        if ($listener -and !$listener.HasExited) {
-            Stop-Process -Id $listener.Id -Force -ErrorAction SilentlyContinue
-        }
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
+
+    if ($ocrExitCode -ne 0) {
+        throw "OCR fixture verification failed with exit code $ocrExitCode.`n$output"
+    }
+
+    $script:ocrFixtureTextObserved = (($output -join "`n") -match "OCR TEST")
+    if (!$script:ocrFixtureTextObserved) {
+        throw "OCR fixture verification did not output expected text.`n$output"
     }
 }
 
@@ -304,17 +248,17 @@ public static class ExternalValidationInputNative {
   const int SM_YVIRTUALSCREEN = 77;
   const int SM_CXVIRTUALSCREEN = 78;
   const int SM_CYVIRTUALSCREEN = 79;
-  public static void SendCtrlShiftO() {
+  public static void SendWinShiftO() {
     INPUT[] inputs = new INPUT[6];
-    inputs[0].type = INPUT_KEYBOARD; inputs[0].u.ki.wVk = 0x11;
+    inputs[0].type = INPUT_KEYBOARD; inputs[0].u.ki.wVk = 0x5B;
     inputs[1].type = INPUT_KEYBOARD; inputs[1].u.ki.wVk = 0x10;
     inputs[2].type = INPUT_KEYBOARD; inputs[2].u.ki.wVk = 0x4F;
     inputs[3].type = INPUT_KEYBOARD; inputs[3].u.ki.wVk = 0x4F; inputs[3].u.ki.dwFlags = 0x0002;
     inputs[4].type = INPUT_KEYBOARD; inputs[4].u.ki.wVk = 0x10; inputs[4].u.ki.dwFlags = 0x0002;
-    inputs[5].type = INPUT_KEYBOARD; inputs[5].u.ki.wVk = 0x11; inputs[5].u.ki.dwFlags = 0x0002;
+    inputs[5].type = INPUT_KEYBOARD; inputs[5].u.ki.wVk = 0x5B; inputs[5].u.ki.dwFlags = 0x0002;
     uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
     if (sent != inputs.Length) {
-      throw new InvalidOperationException("SendInput failed for Ctrl+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
+      throw new InvalidOperationException("SendInput failed for Win+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
     }
   }
   static int NormalizeX(int x) {
@@ -408,7 +352,7 @@ Add-Type -AssemblyName System.Drawing
                 throw "OcrSnip.App exited during desktop hotkey validation. Exit code: $($app.ExitCode)"
             }
 
-            [ExternalValidationInputNative]::SendCtrlShiftO()
+            [ExternalValidationInputNative]::SendWinShiftO()
             Start-Sleep -Seconds 3
             [ExternalValidationInputNative]::SendMouseMove($dragLeft, $dragTop)
             Start-Sleep -Milliseconds 200
@@ -431,32 +375,6 @@ Add-Type -AssemblyName System.Drawing
                 }
             } while ((Get-Date) -lt $attemptDeadline -and (Get-Date) -lt $deadline)
         } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
-
-        if ($AllowFixedSelectionFallback -and !$UseExistingApp) {
-            Stop-ExistingOcrSnipApp
-
-            Set-Clipboard -Value "__OCR_SNIP_PENDING__"
-            $app = Start-Process -FilePath $exe -ArgumentList @("--self-test-fixed-selection", "90,90,670,240") -PassThru -WindowStyle Hidden
-            $fallbackDeadline = (Get-Date).AddSeconds($TimeoutSeconds)
-            do {
-                Start-Sleep -Milliseconds 500
-                $clipboard = Get-ClipboardText
-                if ($clipboard -match [regex]::Escape($ExpectedText)) {
-                    return
-                }
-
-                if ($app.HasExited -and $app.ExitCode -ne 0) {
-                    throw "OcrSnip.App fixed-selection validation failed with exit code $($app.ExitCode). Clipboard: $clipboard"
-                }
-            } while ((Get-Date) -lt $fallbackDeadline -and !$app.HasExited)
-
-            if (!$app.HasExited) {
-                Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
-                throw "OcrSnip.App fixed-selection validation timed out. Clipboard: $clipboard"
-            }
-
-            throw "OcrSnip.App fixed-selection validation exited without expected clipboard text. Exit code: $($app.ExitCode). Clipboard: $clipboard"
-        }
 
         throw "Desktop hotkey snip failed. Clipboard: $clipboard"
     }
@@ -546,9 +464,9 @@ public static class ExternalValidationHotkeyConflictProbe
 "@
 
     $hotkeyId = 90210
-    $registered = [ExternalValidationHotkeyConflictProbe]::RegisterHotKey([IntPtr]::Zero, $hotkeyId, 0x0002 -bor 0x0004, 0x4F)
+    $registered = [ExternalValidationHotkeyConflictProbe]::RegisterHotKey([IntPtr]::Zero, $hotkeyId, 0x0008 -bor 0x0004, 0x4F)
     if (!$registered) {
-        throw "Could not reserve Ctrl+Shift+O for conflict verification."
+        throw "Could not reserve Win+Shift+O for conflict verification."
     }
 
     $process = $null
@@ -642,7 +560,7 @@ $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
 $principal = [Security.Principal.WindowsPrincipal]$identity
 $isAdmin = $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
 
-$appSelfTestsPassed = $false
+$ocrFixtureVerificationPassed = $false
 $idleNoNetworkPassed = $false
 $desktopHotkeyPassed = $false
 $hotkeyConflictPassed = $false
@@ -656,19 +574,19 @@ if ($PreparePostRebootValidation) {
 }
 
 if ($CompletePostRebootValidation) {
-    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Post-reboot completion sends Ctrl+Shift+O and drags on the active desktop."
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Post-reboot completion sends Win+Shift+O and drags on the active desktop."
     Complete-PostRebootValidation
     $PostRebootHotkeyPassed = $true
     $desktopHotkeyPassed = $true
 }
 
-Invoke-AppSelfTests
-$appSelfTestsPassed = $true
+Invoke-OcrFixtureVerification
+$ocrFixtureVerificationPassed = $true
 Test-IdleNoNetwork
 $idleNoNetworkPassed = $true
 
 if ($IncludeDesktopHotkey) {
-    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Desktop hotkey validation sends Ctrl+Shift+O, moves the mouse, drags a selection, and reads the clipboard."
+    Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "Desktop hotkey validation sends Win+Shift+O, moves the mouse, drags a selection, and reads the clipboard."
     Test-DesktopHotkey
     $desktopHotkeyPassed = $true
 }
@@ -701,16 +619,16 @@ if ($ExpectedCpuVendor) {
 }
 
 if ($os.Version -like "10.0.1*") {
-    Set-Gate $evidence "windows10x64" "$($os.Caption) $($os.Version), $($os.OSArchitecture), portable validation kit self-tests passed"
+    Set-Gate $evidence "windows10x64" "$($os.Caption) $($os.Version), $($os.OSArchitecture), portable validation kit OCR fixture verification passed"
 }
 
 if ($cpu.Manufacturer -match "AMD") {
     Set-Gate $evidence "amdCpu" "$($cpu.Manufacturer) / $($cpu.Name)"
-    Set-Gate $evidence "amdModelLoad" "Portable validation kit OCR self-test completed on AMD CPU: $($cpu.Name)"
+    Set-Gate $evidence "amdModelLoad" "Portable validation kit OCR fixture verification completed on AMD CPU: $($cpu.Name)"
 }
 
 if ($cpu.Manufacturer -match "Intel|GenuineIntel") {
-    Set-Gate $evidence "intelModelLoad" "Portable validation kit OCR self-test completed on Intel CPU: $($cpu.Name)"
+    Set-Gate $evidence "intelModelLoad" "Portable validation kit OCR fixture verification completed on Intel CPU: $($cpu.Name)"
 }
 
 if ($isAdmin) {
@@ -832,14 +750,12 @@ $metadata = [ordered]@{
         requireMultiMonitorCapture = [bool]$RequireMultiMonitorCapture
         includeDesktopHotkey = [bool]$IncludeDesktopHotkey
         includeHotkeyConflict = [bool]$IncludeHotkeyConflict
-        allowFixedSelectionFallback = [bool]$AllowFixedSelectionFallback
         completePostRebootValidation = [bool]$CompletePostRebootValidation
         multiMonitorCapturePassed = [bool]$MultiMonitorCapturePassed
     }
     completedChecks = [ordered]@{
-        appSelfTests = $appSelfTestsPassed
-        appSelfTestClipboardObserved = $appSelfTestClipboardObserved
-        renderedScreenCaptureOcr = $appSelfTestsPassed
+        ocrFixtureVerification = $ocrFixtureVerificationPassed
+        ocrFixtureTextObserved = $ocrFixtureTextObserved
         idleNoNetwork = $idleNoNetworkPassed
         desktopHotkey = $desktopHotkeyPassed
         hotkeyConflict = $hotkeyConflictPassed

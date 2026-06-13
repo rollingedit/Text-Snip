@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $exe = Join-Path $repoRoot "artifacts/publish/OcrSnip/OcrSnip.App.exe"
 . (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
-Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-monitor-capture.ps1 sends Ctrl+Shift+O, moves the real cursor, drags selections, and reads the clipboard across monitors."
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-monitor-capture.ps1 sends Win+Shift+O, moves the real cursor, drags selections, and reads the clipboard across monitors."
 
 if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")
@@ -32,13 +32,13 @@ if ($RequireMultipleMonitors -and $screens.Count -lt 2) {
 }
 
 function Invoke-Hotkey {
-    [MonitorCaptureInput]::keybd_event(0x11, 0, 0, [UIntPtr]::Zero)
+    [MonitorCaptureInput]::keybd_event(0x5B, 0, 0, [UIntPtr]::Zero)
     [MonitorCaptureInput]::keybd_event(0x10, 0, 0, [UIntPtr]::Zero)
     [MonitorCaptureInput]::keybd_event(0x4F, 0, 0, [UIntPtr]::Zero)
     Start-Sleep -Milliseconds 80
     [MonitorCaptureInput]::keybd_event(0x4F, 0, 2, [UIntPtr]::Zero)
     [MonitorCaptureInput]::keybd_event(0x10, 0, 2, [UIntPtr]::Zero)
-    [MonitorCaptureInput]::keybd_event(0x11, 0, 2, [UIntPtr]::Zero)
+    [MonitorCaptureInput]::keybd_event(0x5B, 0, 2, [UIntPtr]::Zero)
 }
 
 function Invoke-Drag([int]$Left, [int]$Top, [int]$Right, [int]$Bottom) {

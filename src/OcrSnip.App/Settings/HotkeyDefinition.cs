@@ -6,7 +6,7 @@ public sealed record HotkeyDefinition(
     [property: JsonPropertyName("modifiers")] HotkeyModifiers Modifiers,
     [property: JsonPropertyName("key")] int Key)
 {
-    public static HotkeyDefinition Default { get; } = new(HotkeyModifiers.Control | HotkeyModifiers.Shift, 'O');
+    public static HotkeyDefinition Default { get; } = new(HotkeyModifiers.Windows | HotkeyModifiers.Shift, 'O');
 
     public static bool TryParse(string text, out HotkeyDefinition hotkey)
     {
@@ -33,6 +33,11 @@ public sealed record HotkeyDefinition(
             {
                 modifiers |= HotkeyModifiers.Alt;
             }
+            else if (rawPart.Equals("Win", StringComparison.OrdinalIgnoreCase) ||
+                rawPart.Equals("Windows", StringComparison.OrdinalIgnoreCase))
+            {
+                modifiers |= HotkeyModifiers.Windows;
+            }
             else if (rawPart.Length == 1 && char.IsLetterOrDigit(rawPart[0]))
             {
                 key = char.ToUpperInvariant(rawPart[0]);
@@ -55,6 +60,7 @@ public sealed record HotkeyDefinition(
     public override string ToString()
     {
         var parts = new List<string>();
+        if (Modifiers.HasFlag(HotkeyModifiers.Windows)) parts.Add("Win");
         if (Modifiers.HasFlag(HotkeyModifiers.Control)) parts.Add("Ctrl");
         if (Modifiers.HasFlag(HotkeyModifiers.Shift)) parts.Add("Shift");
         if (Modifiers.HasFlag(HotkeyModifiers.Alt)) parts.Add("Alt");
@@ -69,5 +75,6 @@ public enum HotkeyModifiers : uint
     None = 0,
     Alt = 0x0001,
     Control = 0x0002,
-    Shift = 0x0004
+    Shift = 0x0004,
+    Windows = 0x0008
 }

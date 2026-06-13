@@ -10,7 +10,8 @@ if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")
 }
 
-$process = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+$process = Start-Process -FilePath $exe -ArgumentList "--tray" -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds $Seconds
 try {
     $connections = Get-NetTCPConnection -OwningProcess $process.Id -ErrorAction SilentlyContinue |

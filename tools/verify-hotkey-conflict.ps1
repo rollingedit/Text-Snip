@@ -71,11 +71,11 @@ public static class HotkeyConflictProbe
 "@
 
 $hotkeyId = 90210
-$modControlShift = 0x0002 -bor 0x0004
+$modWinShift = 0x0008 -bor 0x0004
 $vkO = 0x4F
-$registered = [HotkeyConflictProbe]::RegisterHotKey([IntPtr]::Zero, $hotkeyId, $modControlShift, $vkO)
+$registered = [HotkeyConflictProbe]::RegisterHotKey([IntPtr]::Zero, $hotkeyId, $modWinShift, $vkO)
 if (!$registered) {
-    throw "Could not reserve Ctrl+Shift+O for conflict verification."
+    throw "Could not reserve Win+Shift+O for conflict verification."
 }
 
 $process = $null

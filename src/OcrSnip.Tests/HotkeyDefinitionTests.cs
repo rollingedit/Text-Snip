@@ -5,16 +5,18 @@ namespace OcrSnip.Tests;
 public sealed class HotkeyDefinitionTests
 {
     [Fact]
-    public void DefaultHotkey_IsCtrlShiftO()
+    public void DefaultHotkey_IsWinShiftO()
     {
-        Assert.Equal(HotkeyModifiers.Control | HotkeyModifiers.Shift, HotkeyDefinition.Default.Modifiers);
+        Assert.Equal(HotkeyModifiers.Windows | HotkeyModifiers.Shift, HotkeyDefinition.Default.Modifiers);
         Assert.Equal('O', HotkeyDefinition.Default.Key);
-        Assert.Equal("Ctrl+Shift+O", HotkeyDefinition.Default.ToString());
+        Assert.Equal("Win+Shift+O", HotkeyDefinition.Default.ToString());
     }
 
     [Theory]
     [InlineData("Ctrl+Shift+O", HotkeyModifiers.Control | HotkeyModifiers.Shift, 'O')]
     [InlineData("control + alt + 9", HotkeyModifiers.Control | HotkeyModifiers.Alt, '9')]
+    [InlineData("Win+Shift+O", HotkeyModifiers.Windows | HotkeyModifiers.Shift, 'O')]
+    [InlineData("Windows + Shift + O", HotkeyModifiers.Windows | HotkeyModifiers.Shift, 'O')]
     public void TryParse_AcceptsSupportedHotkeys(string text, HotkeyModifiers modifiers, int key)
     {
         Assert.True(HotkeyDefinition.TryParse(text, out var hotkey));
@@ -25,7 +27,6 @@ public sealed class HotkeyDefinitionTests
     [Theory]
     [InlineData("")]
     [InlineData("Ctrl")]
-    [InlineData("Ctrl+Win+O")]
     [InlineData("Ctrl+Shift+F12")]
     public void TryParse_RejectsUnsupportedHotkeys(string text)
     {

@@ -14,7 +14,8 @@ if (!(Test-Path $exe)) {
 }
 
 New-Item -ItemType Directory -Force -Path (Split-Path $output -Parent) | Out-Null
-$process = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
+Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+$process = Start-Process -FilePath $exe -ArgumentList "--tray" -PassThru -WindowStyle Hidden
 Start-Sleep -Seconds $IdleSeconds
 try {
     $running = Get-Process -Id $process.Id -ErrorAction Stop

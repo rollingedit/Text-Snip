@@ -10,7 +10,11 @@ public sealed record ModelPaths(
 {
     public static ModelPaths FromAppBaseDirectory(string baseDirectory)
     {
-        var models = Path.Combine(baseDirectory, "models");
+        return FromModelRoot(Path.Combine(baseDirectory, "models"));
+    }
+
+    public static ModelPaths FromModelRoot(string models)
+    {
         return new ModelPaths(
             Path.Combine(models, "ppocrv6-small-det", "inference.onnx"),
             Path.Combine(models, "ppocrv6-small-det", "inference.yml"),

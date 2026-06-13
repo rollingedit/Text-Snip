@@ -8,11 +8,26 @@ $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $output = Join-Path $repoRoot $OutputPath
 $staging = Join-Path $repoRoot $StagingRoot
 $publishRoot = Join-Path $repoRoot "artifacts/publish/OcrSnip"
+$cliPublishRoot = Join-Path $repoRoot "artifacts/publish/OcrCli"
 $fixtureRoot = Join-Path $repoRoot "Fixtures/generated"
 $fixture = Join-Path $fixtureRoot "simple_text.png"
+$dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
+if (!(Test-Path $dotnet)) {
+    $dotnet = "dotnet"
+}
 
 if (!(Test-Path (Join-Path $publishRoot "OcrSnip.App.exe"))) {
     & (Join-Path $PSScriptRoot "publish.ps1")
+}
+
+& $dotnet publish (Join-Path $repoRoot "src/OcrSnip.Tools.OcrCli/OcrSnip.Tools.OcrCli.csproj") `
+    -c Release `
+    -r win-x64 `
+    --self-contained true `
+    /p:PublishSingleFile=false `
+    -o $cliPublishRoot
+if ($LASTEXITCODE -ne 0) {
+    throw "OCR CLI publish failed with exit code $LASTEXITCODE"
 }
 
 if (!(Test-Path $fixture)) {
@@ -25,6 +40,7 @@ New-Item -ItemType Directory -Force -Path (Join-Path $staging "Fixtures") | Out-
 New-Item -ItemType Directory -Force -Path (Join-Path $staging "tools") | Out-Null
 
 Copy-Item -Recurse -LiteralPath $publishRoot -Destination (Join-Path $staging "OcrSnip")
+Copy-Item -Recurse -LiteralPath $cliPublishRoot -Destination (Join-Path $staging "OcrCli")
 Copy-Item -LiteralPath $fixture -Destination (Join-Path $staging "Fixtures/simple_text.png")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "run-external-validation-kit.ps1") -Destination (Join-Path $staging "tools/run-external-validation-kit.ps1")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "validation-gates.json") -Destination (Join-Path $staging "tools/validation-gates.json")
@@ -55,7 +71,7 @@ Set-Content -LiteralPath (Join-Path $staging "START-HERE.txt") -Value @(
 
 Set-Content -LiteralPath (Join-Path $staging "Run-Windows10.cmd") -Value @(
     "@echo off",
-    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict -AllowFixedSelectionFallback",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict",
     "pause"
 )
 
@@ -126,7 +142,7 @@ Set-Content -LiteralPath (Join-Path $staging "README.md") -Value @(
     "powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation-export.zip",
     '````',
     "",
-    "For post-reboot hotkey validation, prepare the one-time task, reboot, sign in, and wait for the task to write the export ZIP:",
+    "For post-reboot hotkey validation, prepare the one-time task, reboot, sign in, and wait for the task to verify Win+Shift+O and write the export ZIP:",
     "",
     '````powershell',
     "powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -PreparePostRebootValidation",

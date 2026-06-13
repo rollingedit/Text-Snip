@@ -6,7 +6,7 @@ using OcrSnip.Ocr;
 
 if (args.Length < 1)
 {
-    Console.Error.WriteLine("Usage: OcrSnip.Tools.OcrCli <image-path> [--json] [--small-text-boost <Auto|Off|Scale150|Scale200|Scale300>]");
+    Console.Error.WriteLine("Usage: OcrSnip.Tools.OcrCli <image-path> [--json] [--model-root <path>] [--small-text-boost <Auto|Off|Scale150|Scale200|Scale300>]");
     return 2;
 }
 
@@ -18,12 +18,10 @@ if (!File.Exists(imagePath))
     return 2;
 }
 
-var repoRoot = FindRepoRoot(AppContext.BaseDirectory);
-var modelPaths = new ModelPaths(
-    Path.Combine(repoRoot, "assets", "models", "ppocrv6-small-det", "inference.onnx"),
-    Path.Combine(repoRoot, "assets", "models", "ppocrv6-small-det", "inference.yml"),
-    Path.Combine(repoRoot, "assets", "models", "ppocrv6-small-rec", "inference.onnx"),
-    Path.Combine(repoRoot, "assets", "models", "ppocrv6-small-rec", "inference.yml"));
+var modelRoot = ParseOption(args, "--model-root") is { } configuredModelRoot
+    ? Path.GetFullPath(configuredModelRoot)
+    : Path.Combine(FindRepoRoot(AppContext.BaseDirectory), "assets", "models");
+var modelPaths = ModelPaths.FromModelRoot(modelRoot);
 
 var bitmap = new BitmapImage();
 bitmap.BeginInit();
@@ -73,15 +71,30 @@ static string FindRepoRoot(string start)
     throw new InvalidOperationException("Could not locate repository root.");
 }
 
+static string? ParseOption(string[] args, string name)
+{
+    var index = Array.FindIndex(args, argument => string.Equals(argument, name, StringComparison.OrdinalIgnoreCase));
+    if (index < 0)
+    {
+        return null;
+    }
+
+    if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
+    {
+        throw new ArgumentException($"Missing value for {name}.");
+    }
+
+    return args[index + 1];
+}
+
 static SmallTextBoostMode ParseSmallTextBoost(string[] args)
 {
-    var index = Array.FindIndex(args, argument => string.Equals(argument, "--small-text-boost", StringComparison.OrdinalIgnoreCase));
-    if (index < 0)
+    if (ParseOption(args, "--small-text-boost") is not { } value)
     {
         return SmallTextBoostMode.Auto;
     }
 
-    if (index + 1 >= args.Length || !Enum.TryParse<SmallTextBoostMode>(args[index + 1], ignoreCase: true, out var mode))
+    if (!Enum.TryParse<SmallTextBoostMode>(value, ignoreCase: true, out var mode))
     {
         throw new ArgumentException("Invalid --small-text-boost value.");
     }

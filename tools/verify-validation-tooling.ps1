@@ -44,7 +44,7 @@ function New-Evidence([string[]]$PassedGates) {
         $isPassed = $PassedGates -contains $gate
         $data[$gate] = [ordered]@{
             passed = $isPassed
-            evidence = if ($isPassed) { "validation tooling self-test evidence for $gate" } else { "" }
+            evidence = if ($isPassed) { "validation tooling fixture evidence for $gate" } else { "" }
             verifiedAt = if ($isPassed) { Get-Date -Format o } else { "" }
         }
     }
@@ -84,7 +84,8 @@ function New-Metadata {
             includeHotkeyConflict = $false
         }
         completedChecks = [ordered]@{
-            appSelfTests = $true
+            ocrFixtureVerification = $true
+            ocrFixtureTextObserved = $true
             idleNoNetwork = $true
             desktopHotkey = $false
             hotkeyConflict = $false

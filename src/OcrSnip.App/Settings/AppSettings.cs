@@ -7,7 +7,7 @@ public sealed class AppSettings
     public SmallTextBoost SmallTextBoost { get; set; } = SmallTextBoost.Auto;
     public CopyMode CopyMode { get; set; } = CopyMode.Raw;
     public bool ToastEnabled { get; set; } = true;
-    public bool LaunchAtLogin { get; set; } = true;
+    public bool LaunchAtLogin { get; set; }
 }
 
 public enum MemoryMode

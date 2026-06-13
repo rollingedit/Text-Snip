@@ -5,10 +5,18 @@ param(
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
+$dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
+if (!(Test-Path $dotnet)) {
+    $dotnet = "dotnet"
+}
 $setup = Join-Path $repoRoot "installer/Output/OcrSnip-Setup-x64.exe"
 $vcRedist = Join-Path $repoRoot "artifacts/prereqs/vc_redist.x64.exe"
 $target = Join-Path $repoRoot $InstallDir
 $fixture = Join-Path $repoRoot $FixturePath
+$cliProject = Join-Path $repoRoot "src/OcrSnip.Tools.OcrCli/OcrSnip.Tools.OcrCli.csproj"
+$userSettingsPath = Join-Path $env:APPDATA "OcrSnip/settings.json"
+$runKeyPath = "HKCU:\Software\Microsoft\Windows\CurrentVersion\Run"
+$runValueName = "OcrSnip"
 
 function Assert-AssociatedIcon([string]$Path) {
     Add-Type -AssemblyName System.Drawing
@@ -23,6 +31,73 @@ function Assert-AssociatedIcon([string]$Path) {
             $icon.Dispose()
         }
     }
+}
+
+function Stop-ExistingOcrSnipApp {
+    Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue
+    $deadline = (Get-Date).AddSeconds(5)
+    do {
+        Start-Sleep -Milliseconds 250
+        $remaining = Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Select-Object -First 1
+    } while ($remaining -and (Get-Date) -lt $deadline)
+    if ($remaining) {
+        throw "Could not stop an existing OcrSnip.App instance before installer verification."
+    }
+}
+
+function Get-OcrSnipRunValue {
+    $key = Get-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
+    if ($null -eq $key) {
+        return [ordered]@{ Exists = $false; Value = "" }
+    }
+
+    return [ordered]@{ Exists = $true; Value = [string]$key.$runValueName }
+}
+
+function Restore-OcrSnipRunValue($Snapshot) {
+    if ($Snapshot.Exists) {
+        New-Item -Path $runKeyPath -Force | Out-Null
+        Set-ItemProperty -Path $runKeyPath -Name $runValueName -Value $Snapshot.Value
+        return
+    }
+
+    Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
+}
+
+function Use-IsolatedAppSettings {
+    $snapshot = [ordered]@{
+        Exists = Test-Path -LiteralPath $userSettingsPath
+        Value = ""
+    }
+    if ($snapshot.Exists) {
+        $snapshot.Value = Get-Content -LiteralPath $userSettingsPath -Raw
+    }
+
+    New-Item -ItemType Directory -Force -Path (Split-Path $userSettingsPath -Parent) | Out-Null
+    @'
+{
+  "Hotkey": {
+    "Modifiers": 12,
+    "Key": 79
+  },
+  "MemoryMode": 1,
+  "SmallTextBoost": 0,
+  "CopyMode": 0,
+  "ToastEnabled": true,
+  "LaunchAtLogin": false
+}
+'@ | Set-Content -LiteralPath $userSettingsPath
+
+    return $snapshot
+}
+
+function Restore-AppSettings($Snapshot) {
+    if ($Snapshot.Exists) {
+        Set-Content -LiteralPath $userSettingsPath -Value $Snapshot.Value
+        return
+    }
+
+    Remove-Item -LiteralPath $userSettingsPath -Force -ErrorAction SilentlyContinue
 }
 
 if (!(Test-Path $setup)) {
@@ -41,6 +116,10 @@ if (!(Test-Path -LiteralPath $vcRedist)) {
 if (Test-Path $target) {
     Remove-Item $target -Recurse -Force
 }
+
+Stop-ExistingOcrSnipApp
+$runSnapshot = Get-OcrSnipRunValue
+$settingsSnapshot = $null
 
 New-Item -ItemType Directory -Force -Path (Split-Path $target -Parent) | Out-Null
 $installArgs = @(
@@ -71,55 +150,49 @@ foreach ($path in @(
     }
 }
 
-$diagnosticsLog = Join-Path $env:LOCALAPPDATA "OcrSnip/logs/diagnostics.log"
-if (Test-Path $diagnosticsLog) {
-    Remove-Item -LiteralPath $diagnosticsLog -Force
-}
-
-$ocr = Start-Process -FilePath $exe -ArgumentList @("--self-test-ocr", $fixture) -Wait -PassThru -WindowStyle Hidden
-if ($ocr.ExitCode -ne 0) {
-    $details = if (Test-Path $diagnosticsLog) { Get-Content $diagnosticsLog -Raw } else { "No diagnostics log was written." }
-    throw "Installed OCR self-test failed with exit code $($ocr.ExitCode).`n$details"
-}
-
-function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5) {
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    do {
-        $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
-        if ($clipboard -match [regex]::Escape($ExpectedText)) {
-            return $true
-        }
-
-        Start-Sleep -Milliseconds 250
-    } while ((Get-Date) -lt $deadline)
-
-    return $false
-}
-
-if (!(Wait-ClipboardContains "OCR TEST")) {
-    throw "Installed OCR self-test did not place expected text on clipboard."
-}
-
-$rendered = Start-Process -FilePath $exe -ArgumentList "--self-test-rendered-selection" -Wait -PassThru
-if ($rendered.ExitCode -ne 0) {
-    $details = if (Test-Path $diagnosticsLog) { Get-Content $diagnosticsLog -Raw } else { "No diagnostics log was written." }
-    throw "Installed rendered screen-capture OCR self-test failed with exit code $($rendered.ExitCode).`n$details"
-}
-
-if (!(Wait-ClipboardContains "OCR TEST")) {
-    throw "Installed rendered screen-capture OCR self-test did not place expected text on clipboard."
-}
-
-$process = Start-Process -FilePath $exe -PassThru -WindowStyle Hidden
-Start-Sleep -Seconds 3
+$installedModelRoot = Join-Path $target "models"
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
 try {
-    $running = Get-Process -Id $process.Id -ErrorAction Stop
-    if (!$running.Responding) {
-        throw "Installed app process is not responding."
+    $ocrOutput = & $dotnet run --project $cliProject -c Release -- $fixture --model-root $installedModelRoot 2>&1
+    $ocrExitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
+}
+
+if ($ocrExitCode -ne 0) {
+    throw "Installed model OCR verification failed with exit code $ocrExitCode.`n$ocrOutput"
+}
+
+if (($ocrOutput -join "`n") -notmatch "OCR TEST") {
+    throw "Installed model OCR verification did not output expected text.`n$ocrOutput"
+}
+
+Stop-ExistingOcrSnipApp
+
+try {
+    $settingsSnapshot = Use-IsolatedAppSettings
+    Remove-ItemProperty -Path $runKeyPath -Name $runValueName -ErrorAction SilentlyContinue
+
+    $process = Start-Process -FilePath $exe -ArgumentList "--tray" -PassThru -WindowStyle Hidden
+    Start-Sleep -Seconds 3
+    try {
+        $running = Get-Process -Id $process.Id -ErrorAction Stop
+        if (!$running.Responding) {
+            throw "Installed app process is not responding."
+        }
+    }
+    finally {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
     }
 }
 finally {
-    Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+    Stop-ExistingOcrSnipApp
+    Restore-OcrSnipRunValue $runSnapshot
+    if ($settingsSnapshot) {
+        Restore-AppSettings $settingsSnapshot
+    }
 }
 
 $uninstall = Start-Process -FilePath $uninstaller -ArgumentList @("/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART") -Wait -PassThru

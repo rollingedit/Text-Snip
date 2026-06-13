@@ -64,7 +64,7 @@ function Get-CurrentMachineEvidence {
     }
 
     if ($text -match "CPU vendor/name: GenuineIntel" -and (Test-Path $signingReport)) {
-        $evidence["intelModelLoad"] = "release verification completed model/app self-tests on an Intel x64 CPU"
+        $evidence["intelModelLoad"] = "release verification completed model and OCR fixture checks on an Intel x64 CPU"
     }
 
     return $evidence

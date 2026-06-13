@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $exe = Join-Path $repoRoot "artifacts/publish/OcrSnip/OcrSnip.App.exe"
 . (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1")
-Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-hotkey-snip.ps1 starts OCR Snip, sends Ctrl+Shift+O, moves the mouse, drags a desktop selection, and reads the clipboard."
+Assert-HostInputAutomationAllowed -AllowedBySwitch ([bool]$AllowHostInputAutomation) -Reason "verify-hotkey-snip.ps1 starts OCR Snip, sends Win+Shift+O, moves the mouse, drags a desktop selection, and reads the clipboard."
 
 if (!(Test-Path $exe)) {
     & (Join-Path $PSScriptRoot "publish.ps1")
@@ -38,7 +38,7 @@ function Set-ValidationSettings {
     New-Item -ItemType Directory -Path $settingsDirectory -Force | Out-Null
     $settings = @{
         Hotkey = @{
-            modifiers = 6
+            modifiers = 12
             key = 79
         }
         MemoryMode = 1
@@ -92,17 +92,17 @@ public static class InputNative {
   const int SM_YVIRTUALSCREEN = 77;
   const int SM_CXVIRTUALSCREEN = 78;
   const int SM_CYVIRTUALSCREEN = 79;
-  public static void SendCtrlShiftO() {
+  public static void SendWinShiftO() {
     INPUT[] inputs = new INPUT[6];
-    inputs[0].type = INPUT_KEYBOARD; inputs[0].u.ki.wVk = 0x11;
+    inputs[0].type = INPUT_KEYBOARD; inputs[0].u.ki.wVk = 0x5B;
     inputs[1].type = INPUT_KEYBOARD; inputs[1].u.ki.wVk = 0x10;
     inputs[2].type = INPUT_KEYBOARD; inputs[2].u.ki.wVk = 0x4F;
     inputs[3].type = INPUT_KEYBOARD; inputs[3].u.ki.wVk = 0x4F; inputs[3].u.ki.dwFlags = 0x0002;
     inputs[4].type = INPUT_KEYBOARD; inputs[4].u.ki.wVk = 0x10; inputs[4].u.ki.dwFlags = 0x0002;
-    inputs[5].type = INPUT_KEYBOARD; inputs[5].u.ki.wVk = 0x11; inputs[5].u.ki.dwFlags = 0x0002;
+    inputs[5].type = INPUT_KEYBOARD; inputs[5].u.ki.wVk = 0x5B; inputs[5].u.ki.dwFlags = 0x0002;
     uint sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
     if (sent != inputs.Length) {
-      throw new InvalidOperationException("SendInput failed for Ctrl+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
+      throw new InvalidOperationException("SendInput failed for Win+Shift+O. Sent " + sent + " of " + inputs.Length + ", last error " + Marshal.GetLastWin32Error() + ".");
     }
   }
   static int NormalizeX(int x) {
@@ -188,7 +188,7 @@ try {
             throw "OcrSnip.App exited during hotkey snip verification. Exit code: $($app.ExitCode)"
         }
 
-        [InputNative]::SendCtrlShiftO()
+        [InputNative]::SendWinShiftO()
         Start-Sleep -Seconds 1
         [InputNative]::SendMouseMove($dragLeft, $dragTop)
         Start-Sleep -Milliseconds 200

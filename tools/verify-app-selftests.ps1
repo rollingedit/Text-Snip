@@ -1,55 +1,42 @@
 param(
-    [string]$FixturePath = "Fixtures/generated/simple_text.png"
+    [string]$FixturePath = "Fixtures/generated/simple_text.png",
+    [string]$ExpectedText = "OCR TEST",
+    [string]$ModelRoot = "assets/models"
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$exe = Join-Path $repoRoot "artifacts/publish/OcrSnip/OcrSnip.App.exe"
-$fixture = Join-Path $repoRoot $FixturePath
-
-if (!(Test-Path $exe)) {
-    & (Join-Path $PSScriptRoot "publish.ps1")
+$dotnet = Join-Path $repoRoot ".dotnet/dotnet.exe"
+if (!(Test-Path $dotnet)) {
+    $dotnet = "dotnet"
 }
+
+$fixture = Join-Path $repoRoot $FixturePath
+$modelRootPath = Join-Path $repoRoot $ModelRoot
+$cliProject = Join-Path $repoRoot "src/OcrSnip.Tools.OcrCli/OcrSnip.Tools.OcrCli.csproj"
 
 if (!(Test-Path $fixture)) {
     & (Join-Path $PSScriptRoot "generate-private-fixtures.ps1")
 }
 
-$startup = Start-Process -FilePath $exe -ArgumentList "--self-test-startup" -Wait -PassThru -WindowStyle Hidden
-if ($startup.ExitCode -ne 0) {
-    throw "Startup self-test failed with exit code $($startup.ExitCode)"
+& (Join-Path $PSScriptRoot "verify-models.ps1")
+
+$previousErrorActionPreference = $ErrorActionPreference
+$ErrorActionPreference = "Continue"
+try {
+    $output = & $dotnet run --project $cliProject -c Release -- $fixture --model-root $modelRootPath 2>&1
+    $exitCode = $LASTEXITCODE
+}
+finally {
+    $ErrorActionPreference = $previousErrorActionPreference
 }
 
-$ocr = Start-Process -FilePath $exe -ArgumentList @("--self-test-ocr", $fixture) -Wait -PassThru -WindowStyle Hidden
-if ($ocr.ExitCode -ne 0) {
-    throw "OCR clipboard self-test failed with exit code $($ocr.ExitCode)"
+if ($exitCode -ne 0) {
+    throw "OCR CLI fixture verification failed with exit code $exitCode.`n$output"
 }
 
-function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5) {
-    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
-    do {
-        $clipboard = Get-Clipboard -Raw -ErrorAction SilentlyContinue
-        if ($clipboard -match [regex]::Escape($ExpectedText)) {
-            return $true
-        }
-
-        Start-Sleep -Milliseconds 250
-    } while ((Get-Date) -lt $deadline)
-
-    return $false
+if (($output -join "`n") -notmatch [regex]::Escape($ExpectedText)) {
+    throw "OCR CLI fixture verification did not output expected text '$ExpectedText'.`n$output"
 }
 
-if (!(Wait-ClipboardContains "OCR TEST")) {
-    throw "OCR clipboard self-test did not place expected text on clipboard."
-}
-
-$rendered = Start-Process -FilePath $exe -ArgumentList "--self-test-rendered-selection" -Wait -PassThru
-if ($rendered.ExitCode -ne 0) {
-    throw "Rendered screen-capture OCR self-test failed with exit code $($rendered.ExitCode)"
-}
-
-if (!(Wait-ClipboardContains "OCR TEST")) {
-    throw "Rendered screen-capture OCR self-test did not place expected text on clipboard."
-}
-
-Write-Host "App self-tests passed."
+Write-Host "OCR CLI verification passed."
