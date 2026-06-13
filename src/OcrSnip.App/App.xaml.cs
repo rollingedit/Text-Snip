@@ -33,15 +33,15 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        _mutex = new Mutex(true, "Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_Resident", out var createdNew);
+        _mutex = new Mutex(true, SingleInstanceActivation.ResidentMutexName, out var createdNew);
         if (!createdNew)
         {
-            SignalExistingInstance();
+            SingleInstanceActivation.SignalExistingInstance();
             Shutdown();
             return;
         }
 
-        _showWindowEvent = new EventWaitHandle(false, EventResetMode.AutoReset, "Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_ShowWindow");
+        _showWindowEvent = SingleInstanceActivation.CreateShowWindowEvent();
         _showWindowRegistration = ThreadPool.RegisterWaitForSingleObject(
             _showWindowEvent,
             (_, _) => Dispatcher.Invoke(ShowStatusWindow),
@@ -113,20 +113,6 @@ public partial class App : System.Windows.Application
         onboarding.Activate();
     }
 
-    private static void SignalExistingInstance()
-    {
-        try
-        {
-            using var existing = EventWaitHandle.OpenExisting("Global\\OcrSnip_1B2F1F57_13E7_4F40_9E7D_ShowWindow");
-            existing.Set();
-        }
-        catch (WaitHandleCannotBeOpenedException)
-        {
-        }
-        catch (UnauthorizedAccessException)
-        {
-        }
-    }
 }
 
 file static class ValidationSelection

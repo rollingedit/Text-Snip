@@ -65,9 +65,11 @@ public sealed class SnipWorkflow
 
         try
         {
+            ShowToast("Drag to select text");
             var selection = _selection.SelectRectangle();
             if (selection is null)
             {
+                ShowToast("Snip canceled");
                 return;
             }
 
@@ -95,10 +97,11 @@ public sealed class SnipWorkflow
         {
             ShowToast(ex.Message);
         }
-        catch (Exception)
+        catch (Exception ex)
         {
             _ocrEngine.Unload();
-            ShowToast("OCR failed");
+            ShowToast("OCR failed - details opened");
+            _resultPresenter.ShowResult(OcrFailureDiagnostics.Format(ex));
         }
         finally
         {

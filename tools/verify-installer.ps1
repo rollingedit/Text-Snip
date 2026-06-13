@@ -5,6 +5,7 @@ param(
 $ErrorActionPreference = "Stop"
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 $setup = Join-Path $repoRoot "installer/Output/OcrSnip-Setup-x64.exe"
+$vcRedist = Join-Path $repoRoot "artifacts/prereqs/vc_redist.x64.exe"
 $target = Join-Path $repoRoot $InstallDir
 
 function Assert-AssociatedIcon([string]$Path) {
@@ -27,6 +28,9 @@ if (!(Test-Path $setup)) {
 }
 
 Assert-AssociatedIcon $setup
+if (!(Test-Path -LiteralPath $vcRedist)) {
+    throw "Installer prerequisite missing: $vcRedist"
+}
 
 if (Test-Path $target) {
     Remove-Item $target -Recurse -Force

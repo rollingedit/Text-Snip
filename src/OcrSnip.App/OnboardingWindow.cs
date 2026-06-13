@@ -1,12 +1,13 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Threading;
 using OcrSnip.App.Settings;
 
 namespace OcrSnip.App;
 
 public sealed class OnboardingWindow : Window
 {
-    public OnboardingWindow(AppSettings settings, Action startSnip, Action showSettings)
+    public OnboardingWindow(AppSettings settings, Func<Task> startSnip, Action showSettings)
     {
         Title = "OCR Snip";
         Width = 420;
@@ -58,10 +59,21 @@ public sealed class OnboardingWindow : Window
         };
 
         var start = new System.Windows.Controls.Button { Content = "Start snip", MinWidth = 96, Height = 32, Margin = new Thickness(0, 0, 8, 0) };
-        start.Click += (_, _) =>
+        start.Click += async (_, _) =>
         {
-            Close();
-            startSnip();
+            Hide();
+            try
+            {
+                await Dispatcher.Yield(DispatcherPriority.ApplicationIdle);
+                await startSnip().ConfigureAwait(true);
+                Close();
+            }
+            catch (Exception ex)
+            {
+                Show();
+                Activate();
+                System.Windows.MessageBox.Show(OcrFailureDiagnostics.Format(ex), "OCR Snip failed to start", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
         };
         buttons.Children.Add(start);
 

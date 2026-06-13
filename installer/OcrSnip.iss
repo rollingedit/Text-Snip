@@ -27,7 +27,7 @@ Name: "launchatlogin"; Description: "Start OCR Snip when I sign in"; GroupDescri
 
 [Files]
 Source: "..\artifacts\publish\OcrSnip\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall skipifsourcedoesntexist
+Source: "..\artifacts\prereqs\vc_redist.x64.exe"; DestDir: "{tmp}"; Flags: deleteafterinstall
 
 [Icons]
 Name: "{group}\OCR Snip"; Filename: "{app}\{#MyAppExeName}"
@@ -37,18 +37,13 @@ Name: "{autodesktop}\OCR Snip"; Filename: "{app}\{#MyAppExeName}"; Tasks: deskto
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OcrSnip"; ValueData: """{app}\{#MyAppExeName}"" --tray"; Tasks: launchatlogin
 
 [Run]
-Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Check: NeedsVCRedist and VCRedistBundled
+Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Check: NeedsVCRedist
 Filename: "{app}\{#MyAppExeName}"; Description: "Launch OCR Snip"; Flags: nowait postinstall skipifsilent
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}"
 
 [Code]
-function VCRedistBundled(): Boolean;
-begin
-  Result := FileExists(ExpandConstant('{tmp}\vc_redist.x64.exe'));
-end;
-
 function NeedsVCRedist(): Boolean;
 var
   Version: string;

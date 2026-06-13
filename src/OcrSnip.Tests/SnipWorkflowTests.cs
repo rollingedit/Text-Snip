@@ -18,6 +18,7 @@ public sealed class SnipWorkflowTests
         await workflow.StartSnipAsync();
 
         Assert.Equal("hello", fakes.CopiedText);
+        Assert.Contains("Drag to select text", fakes.Toasts);
         Assert.Contains("Reading...", fakes.Toasts);
         Assert.Contains("Copied", fakes.Toasts);
     }
@@ -45,6 +46,7 @@ public sealed class SnipWorkflowTests
         await workflow.StartSnipAsync();
 
         Assert.Null(fakes.CopiedText);
+        Assert.Contains("Drag to select text", fakes.Toasts);
         Assert.Contains("No text found", fakes.Toasts);
     }
 
@@ -58,6 +60,20 @@ public sealed class SnipWorkflowTests
 
         Assert.Equal("fallback", fakes.PresentedText);
         Assert.Contains("Clipboard busy - text opened", fakes.Toasts);
+    }
+
+    [Fact]
+    public async Task StartSnipAsync_PresentsDiagnosticsWhenOcrThrows()
+    {
+        var fakes = new Fakes { OcrException = new DllNotFoundException("OpenCvSharpExtern.dll") };
+        var workflow = CreateWorkflow(fakes);
+
+        await workflow.StartSnipAsync();
+
+        Assert.Null(fakes.CopiedText);
+        Assert.Contains("OCR failed - details opened", fakes.Toasts);
+        Assert.Contains("DllNotFoundException", fakes.PresentedText);
+        Assert.Contains("OpenCvSharpExtern.dll", fakes.PresentedText);
     }
 
     [Fact]
@@ -79,6 +95,19 @@ public sealed class SnipWorkflowTests
         Assert.Equal(OcrCopyMode.Code, fakes.Ocr.Options.CopyMode);
     }
 
+    [Fact]
+    public async Task StartSnipAsync_ShowsCanceledWhenSelectionIsMissing()
+    {
+        var fakes = new Fakes { Selection = null };
+        var workflow = CreateWorkflow(fakes);
+
+        await workflow.StartSnipAsync();
+
+        Assert.Null(fakes.CopiedText);
+        Assert.Contains("Drag to select text", fakes.Toasts);
+        Assert.Contains("Snip canceled", fakes.Toasts);
+    }
+
     private static SnipWorkflow CreateWorkflow(Fakes fakes, AppSettings? settings = null)
     {
         return new SnipWorkflow(
@@ -96,6 +125,8 @@ public sealed class SnipWorkflowTests
     {
         public FakeOcr Ocr { get; } = new();
         public OcrResult OcrResult { get => Ocr.Result; set => Ocr.Result = value; }
+        public Exception? OcrException { get => Ocr.Exception; set => Ocr.Exception = value; }
+        public Int32Rect? Selection { get; set; } = new(0, 0, 10, 10);
         public bool ClipboardSucceeds { get; set; } = true;
         public string? CopiedText { get; private set; }
         public string? PresentedText { get; private set; }
@@ -103,7 +134,7 @@ public sealed class SnipWorkflowTests
         public OcrOptions Options => Ocr.Options;
         public Task<OcrResult> RecognizeAsync(BitmapSource crop, CancellationToken cancellationToken) => Ocr.RecognizeAsync(crop, cancellationToken);
         public void Unload() => Ocr.Unload();
-        public Int32Rect? SelectRectangle() => new(0, 0, 10, 10);
+        public Int32Rect? SelectRectangle() => Selection;
         public Task<BitmapSource> CaptureAsync(Int32Rect rectangle) => Task.FromResult(CreateBitmap());
         public bool TrySetText(string text, out Exception? error)
         {
@@ -130,8 +161,17 @@ public sealed class SnipWorkflowTests
     {
         public OcrOptions Options { get; } = new();
         public OcrResult Result { get; set; } = new("text", []);
+        public Exception? Exception { get; set; }
         public bool Unloaded { get; private set; }
-        public Task<OcrResult> RecognizeAsync(BitmapSource crop, CancellationToken cancellationToken) => Task.FromResult(Result);
+        public Task<OcrResult> RecognizeAsync(BitmapSource crop, CancellationToken cancellationToken)
+        {
+            if (Exception is not null)
+            {
+                throw Exception;
+            }
+
+            return Task.FromResult(Result);
+        }
         public void Unload() => Unloaded = true;
     }
 }

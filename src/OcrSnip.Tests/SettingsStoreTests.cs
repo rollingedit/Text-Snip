@@ -28,4 +28,18 @@ public sealed class SettingsStoreTests
         Assert.Equal(SmallTextBoost.Scale200, loaded.SmallTextBoost);
         Assert.Equal(CopyMode.Code, loaded.CopyMode);
     }
+
+    [Fact]
+    public void Exists_TracksSettingsFilePresence()
+    {
+        var directory = Path.Combine(Path.GetTempPath(), "OcrSnipTests", Guid.NewGuid().ToString("N"));
+        var path = Path.Combine(directory, "settings.json");
+        var store = new SettingsStore(path);
+
+        Assert.False(store.Exists);
+
+        store.Save(new AppSettings());
+
+        Assert.True(store.Exists);
+    }
 }
