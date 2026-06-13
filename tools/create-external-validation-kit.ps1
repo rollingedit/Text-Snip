@@ -29,48 +29,100 @@ Copy-Item -LiteralPath $fixture -Destination (Join-Path $staging "Fixtures/simpl
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "run-external-validation-kit.ps1") -Destination (Join-Path $staging "tools/run-external-validation-kit.ps1")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "validation-gates.json") -Destination (Join-Path $staging "tools/validation-gates.json")
 
-@"
-# OCR Snip External Validation Kit
+Set-Content -LiteralPath (Join-Path $staging "Run-Windows10.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict",
+    "pause"
+)
 
-Run this from an interactive PowerShell session on the validation machine:
+Set-Content -LiteralPath (Join-Path $staging "Run-AMD.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedCpuVendor AMD -IncludeDesktopHotkey -IncludeHotkeyConflict",
+    "pause"
+)
 
-````powershell
-powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict
-````
+Set-Content -LiteralPath (Join-Path $staging "Run-Admin-Elevated.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -RequireAdminAccount -IncludeDesktopHotkey -IncludeHotkeyConflict",
+    "pause"
+)
 
-For AMD validation, add:
+Set-Content -LiteralPath (Join-Path $staging "Prepare-PostReboot.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -PreparePostRebootValidation",
+    "pause"
+)
 
-````powershell
--ExpectedCpuVendor AMD
-````
+Set-Content -LiteralPath (Join-Path $staging "Run-DPI-125.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedDpiScale 125 -IncludeDesktopHotkey",
+    "pause"
+)
 
-For DPI validation, run from the target DPI layout and include the desktop hotkey check:
+Set-Content -LiteralPath (Join-Path $staging "Run-DPI-150.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -ExpectedDpiScale 150 -IncludeDesktopHotkey",
+    "pause"
+)
 
-````powershell
--ExpectedDpiScale 125 -IncludeDesktopHotkey
--ExpectedDpiScale 150 -IncludeDesktopHotkey
--RequireMixedDpi -RequireNegativeVirtualMonitor -RequireMultiMonitorCapture -MultiMonitorCapturePassed -IncludeDesktopHotkey
-````
+Set-Content -LiteralPath (Join-Path $staging "Run-MixedDPI-MultiMonitor.cmd") -Value @(
+    "@echo off",
+    "powershell -NoProfile -ExecutionPolicy Bypass -File ""%~dp0tools\run-external-validation-kit.ps1"" -RequireMixedDpi -RequireNegativeVirtualMonitor -RequireMultiMonitorCapture -MultiMonitorCapturePassed -IncludeDesktopHotkey",
+    "pause"
+)
 
-The runner writes `artifacts\reports\external-validation-export.zip`.
-Import that ZIP back in the repo with:
-
-````powershell
-powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation-export.zip
-````
-
-For post-reboot hotkey validation, prepare the one-time task, reboot, sign in, and wait for the task to write the export ZIP:
-
-````powershell
-powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -PreparePostRebootValidation
-````
-
-For elevated admin validation, run PowerShell as administrator and add:
-
-````powershell
--RequireAdminAccount
-````
-"@ | Set-Content (Join-Path $staging "README.md")
+Set-Content -LiteralPath (Join-Path $staging "README.md") -Value @(
+    "# OCR Snip External Validation Kit",
+    "",
+    "Run this from an interactive PowerShell session on the validation machine:",
+    "",
+    '````powershell',
+    "powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -ExpectedWindows Windows10 -IncludeDesktopHotkey -IncludeHotkeyConflict",
+    '````',
+    "",
+    "For AMD validation, add:",
+    "",
+    '````powershell',
+    "-ExpectedCpuVendor AMD",
+    '````',
+    "",
+    "For DPI validation, run from the target DPI layout and include the desktop hotkey check:",
+    "",
+    '````powershell',
+    "-ExpectedDpiScale 125 -IncludeDesktopHotkey",
+    "-ExpectedDpiScale 150 -IncludeDesktopHotkey",
+    "-RequireMixedDpi -RequireNegativeVirtualMonitor -RequireMultiMonitorCapture -MultiMonitorCapturePassed -IncludeDesktopHotkey",
+    '````',
+    "",
+    'The runner writes `artifacts\reports\external-validation-export.zip`.',
+    "Import that ZIP back in the repo with:",
+    "",
+    '````powershell',
+    "powershell -ExecutionPolicy Bypass -File tools\import-external-validation.ps1 -SourcePath path\to\external-validation-export.zip",
+    '````',
+    "",
+    "For post-reboot hotkey validation, prepare the one-time task, reboot, sign in, and wait for the task to write the export ZIP:",
+    "",
+    '````powershell',
+    "powershell -ExecutionPolicy Bypass -File tools\run-external-validation-kit.ps1 -PreparePostRebootValidation",
+    '````',
+    "",
+    "For elevated admin validation, run PowerShell as administrator and add:",
+    "",
+    '````powershell',
+    "-RequireAdminAccount",
+    '````',
+    "",
+    "Convenience launchers are included for common runs:",
+    "",
+    '- `Run-Windows10.cmd`',
+    '- `Run-AMD.cmd`',
+    '- `Run-Admin-Elevated.cmd`',
+    '- `Prepare-PostReboot.cmd`',
+    '- `Run-DPI-125.cmd`',
+    '- `Run-DPI-150.cmd`',
+    '- `Run-MixedDPI-MultiMonitor.cmd`'
+)
 
 New-Item -ItemType Directory -Force -Path (Split-Path $output -Parent) | Out-Null
 if (Test-Path $output) {

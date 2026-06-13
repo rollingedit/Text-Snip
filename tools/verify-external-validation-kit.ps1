@@ -36,6 +36,13 @@ $archive = [System.IO.Compression.ZipFile]::OpenRead($kit)
 try {
     $entries = @($archive.Entries)
     Assert-ZipEntry $entries "README.md"
+    Assert-ZipEntry $entries "Run-Windows10.cmd"
+    Assert-ZipEntry $entries "Run-AMD.cmd"
+    Assert-ZipEntry $entries "Run-Admin-Elevated.cmd"
+    Assert-ZipEntry $entries "Prepare-PostReboot.cmd"
+    Assert-ZipEntry $entries "Run-DPI-125.cmd"
+    Assert-ZipEntry $entries "Run-DPI-150.cmd"
+    Assert-ZipEntry $entries "Run-MixedDPI-MultiMonitor.cmd"
     Assert-ZipEntry $entries "OcrSnip/OcrSnip.App.exe"
     Assert-ZipEntry $entries "OcrSnip/models/ppocrv6-small-det/inference.onnx"
     Assert-ZipEntry $entries "OcrSnip/models/ppocrv6-small-rec/inference.onnx"
