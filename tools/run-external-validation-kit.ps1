@@ -107,6 +107,48 @@ function Get-ClipboardText {
     return ""
 }
 
+function Set-ValidationSettings {
+    $settingsPath = Join-Path $env:APPDATA "OcrSnip\settings.json"
+    $settingsDirectory = Split-Path -Parent $settingsPath
+    $previous = $null
+    if (Test-Path $settingsPath) {
+        $previous = Get-Content $settingsPath -Raw
+    }
+
+    New-Item -ItemType Directory -Path $settingsDirectory -Force | Out-Null
+    $settings = @{
+        Hotkey = @{
+            modifiers = 6
+            key = 79
+        }
+        MemoryMode = 1
+        SmallTextBoost = 0
+        CopyMode = 0
+        ToastEnabled = $true
+        LaunchAtLogin = $true
+    }
+    $settings | ConvertTo-Json -Depth 4 | Set-Content -Path $settingsPath -Encoding UTF8
+
+    return [pscustomobject]@{
+        Path = $settingsPath
+        Previous = $previous
+        HadPrevious = $null -ne $previous
+    }
+}
+
+function Restore-ValidationSettings($Snapshot) {
+    if (!$Snapshot) {
+        return
+    }
+
+    if ($Snapshot.HadPrevious) {
+        Set-Content -Path $Snapshot.Path -Value $Snapshot.Previous -Encoding UTF8
+    }
+    elseif (Test-Path $Snapshot.Path) {
+        Remove-Item -Path $Snapshot.Path -Force
+    }
+}
+
 function Wait-ClipboardContains([string]$ExpectedText, [int]$TimeoutSeconds = 5) {
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     do {
@@ -307,9 +349,11 @@ Add-Type -AssemblyName System.Drawing
 
     $target = Start-Process powershell -ArgumentList @("-NoProfile", "-STA", "-Command", $formScript) -PassThru
     $app = $null
+    $settingsSnapshot = $null
     try {
         Start-Sleep -Seconds 2
         Set-Clipboard -Value "__OCR_SNIP_PENDING__"
+        $settingsSnapshot = Set-ValidationSettings
         if ($UseExistingApp) {
             $app = Get-Process -Name "OcrSnip.App" -ErrorAction SilentlyContinue | Select-Object -First 1
             if (!$app) {
@@ -363,6 +407,7 @@ Add-Type -AssemblyName System.Drawing
         if ($target -and !$target.HasExited) {
             Stop-Process -Id $target.Id -Force -ErrorAction SilentlyContinue
         }
+        Restore-ValidationSettings $settingsSnapshot
     }
 }
 
