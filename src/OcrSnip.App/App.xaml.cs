@@ -3,6 +3,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media.Imaging;
+using OcrSnip.App.Capture;
 using OcrSnip.App.Clipboard;
 using OcrSnip.App.Hotkeys;
 using OcrSnip.App.Settings;
@@ -74,22 +75,29 @@ file static class ValidationSelection
                 continue;
             }
 
-            var parts = args[index + 1].Split(',', StringSplitOptions.TrimEntries);
-            if (parts.Length != 4 ||
-                !int.TryParse(parts[0], out var x) ||
-                !int.TryParse(parts[1], out var y) ||
-                !int.TryParse(parts[2], out var width) ||
-                !int.TryParse(parts[3], out var height) ||
-                width <= 0 ||
-                height <= 0)
+            return TryParseRectangle(args[index + 1]) is { } rectangle
+                ? new FixedSelectionService(rectangle)
+                : null;
+        }
+
+        return null;
+    }
+
+    public static Int32Rect? TryParseRectangle(string value)
+    {
+        var parts = value.Split(',', StringSplitOptions.TrimEntries);
+        if (parts.Length != 4 ||
+            !int.TryParse(parts[0], out var x) ||
+            !int.TryParse(parts[1], out var y) ||
+            !int.TryParse(parts[2], out var width) ||
+            !int.TryParse(parts[3], out var height) ||
+            width <= 0 ||
+            height <= 0)
             {
                 return null;
             }
 
-            return new FixedSelectionService(new Int32Rect(x, y, width, height));
-        }
-
-        return null;
+        return new Int32Rect(x, y, width, height);
     }
 }
 
@@ -175,18 +183,23 @@ file static class SelfTestCommand
             return;
         }
 
-        var selection = ValidationSelection.TryParse(["--validation-selection", args[1]]);
-        if (selection is null)
+        var rectangle = ValidationSelection.TryParseRectangle(args[1]);
+        if (rectangle is null)
         {
             Environment.ExitCode = 13;
             return;
         }
 
-        var settingsStore = new SettingsStore();
-        var settings = settingsStore.Load();
         using var engine = new OcrEngine(ModelPaths.FromAppBaseDirectory(AppContext.BaseDirectory));
-        var workflow = new SnipWorkflow(settingsStore, settings, engine, selection);
-        await workflow.StartSnipAsync().ConfigureAwait(true);
+        var bitmap = await ScreenCapture.CaptureAsync(rectangle.Value).ConfigureAwait(true);
+        var result = await engine.RecognizeAsync(bitmap, CancellationToken.None).ConfigureAwait(true);
+        if (string.IsNullOrWhiteSpace(result.Text))
+        {
+            Environment.ExitCode = 14;
+            return;
+        }
+
+        Environment.ExitCode = ClipboardService.TrySetText(result.Text, out _) ? 0 : 4;
     }
 
     private static void RunStartupTest()
