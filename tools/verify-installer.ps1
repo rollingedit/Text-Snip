@@ -10,6 +10,7 @@ if (!(Test-Path $dotnet)) {
     $dotnet = "dotnet"
 }
 $setup = Join-Path $repoRoot "installer/Output/OcrSnip-Setup-x64.exe"
+$installerScript = Join-Path $repoRoot "installer/OcrSnip.iss"
 $vcRedist = Join-Path $repoRoot "artifacts/prereqs/vc_redist.x64.exe"
 $target = Join-Path $repoRoot $InstallDir
 $fixture = Join-Path $repoRoot $FixturePath
@@ -102,6 +103,18 @@ function Restore-AppSettings($Snapshot) {
 
 if (!(Test-Path $setup)) {
     & (Join-Path $PSScriptRoot "build-installer.ps1")
+}
+
+$installerScriptContent = Get-Content -LiteralPath $installerScript -Raw
+foreach ($requiredSnippet in @(
+    'Name: "resetuserdata"',
+    'Name: "{userappdata}\OcrSnip"; Tasks: resetuserdata',
+    'Name: "{localappdata}\OcrSnip\logs"; Tasks: resetuserdata',
+    'ValueName: "OcrSnip"; Flags: deletevalue'
+)) {
+    if (!$installerScriptContent.Contains($requiredSnippet)) {
+        throw "Installer script is missing required repair/reset behavior: $requiredSnippet"
+    }
 }
 
 if (!(Test-Path $fixture)) {

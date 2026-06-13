@@ -24,6 +24,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 [Tasks]
 Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: checkedonce
 Name: "launchatlogin"; Description: "Start OCR Snip when I sign in"; GroupDescription: "Startup:"; Flags: unchecked
+Name: "resetuserdata"; Description: "Reset OCR Snip settings and logs"; GroupDescription: "Repair options:"; Flags: unchecked
 
 [Files]
 Source: "..\artifacts\publish\OcrSnip\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -41,6 +42,8 @@ Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: 
 Type: filesandordirs; Name: "{app}\*"
 Type: files; Name: "{autodesktop}\OCR Snip.lnk"
 Type: files; Name: "{group}\OCR Snip.lnk"
+Type: filesandordirs; Name: "{userappdata}\OcrSnip"; Tasks: resetuserdata
+Type: filesandordirs; Name: "{localappdata}\OcrSnip\logs"; Tasks: resetuserdata
 
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Check: NeedsVCRedist

@@ -4,6 +4,8 @@ Press `Win+Shift+O`, drag over text, and release. OCR Snip copies recognized tex
 
 The installer creates a Start Menu shortcut and selects the desktop shortcut option by default. When OCR Snip is open, pin it from its taskbar icon if you want one-click access.
 
+Re-running the installer repairs the app by stopping OCR Snip, replacing installed app files, refreshing shortcuts, and clearing any stale launch-at-login entry. The optional reset task also removes OCR Snip settings and diagnostic logs.
+
 ## Features
 
 - Local OCR
