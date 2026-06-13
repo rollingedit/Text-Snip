@@ -114,7 +114,8 @@ public sealed class OcrEngine(ModelPaths modelPaths) : IDisposable
         var missing = modelPaths.AllFiles.Where(path => !File.Exists(path)).ToArray();
         if (missing.Length > 0)
         {
-            throw new ModelUnavailableException("OCR model missing");
+            throw new ModelUnavailableException(
+                "OCR model files are missing: " + string.Join(", ", missing.Select(Path.GetFileName)));
         }
 
         lock (_lock)

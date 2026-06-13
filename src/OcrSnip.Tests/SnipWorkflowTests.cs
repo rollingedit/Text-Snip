@@ -77,6 +77,20 @@ public sealed class SnipWorkflowTests
     }
 
     [Fact]
+    public async Task StartSnipAsync_PresentsDiagnosticsWhenModelIsUnavailable()
+    {
+        var fakes = new Fakes { OcrException = new ModelUnavailableException("OCR model files are missing: inference.onnx") };
+        var workflow = CreateWorkflow(fakes);
+
+        await workflow.StartSnipAsync();
+
+        Assert.Null(fakes.CopiedText);
+        Assert.Contains("OCR model missing - details opened", fakes.Toasts);
+        Assert.Contains("ModelUnavailableException", fakes.PresentedText);
+        Assert.Contains("inference.onnx", fakes.PresentedText);
+    }
+
+    [Fact]
     public async Task StartSnipAsync_HonorsToastDisabledAndMapsOcrOptions()
     {
         var fakes = new Fakes { OcrResult = new OcrResult("code", []) };

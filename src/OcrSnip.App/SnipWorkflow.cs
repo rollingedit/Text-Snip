@@ -95,7 +95,9 @@ public sealed class SnipWorkflow
         }
         catch (ModelUnavailableException ex)
         {
-            ShowToast(ex.Message);
+            AppDiagnostics.LogException("OCR model unavailable.", ex);
+            ShowToast("OCR model missing - details opened");
+            _resultPresenter.ShowResult(OcrFailureDiagnostics.Format(ex));
         }
         catch (Exception ex)
         {
