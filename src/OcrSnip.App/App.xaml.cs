@@ -193,6 +193,11 @@ file static class SelfTestCommand
                     break;
             }
         }
+        catch (Exception ex)
+        {
+            AppDiagnostics.LogException($"Self-test command failed: {args[0]}", ex);
+            Environment.ExitCode = 99;
+        }
         finally
         {
             shutdown();

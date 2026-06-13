@@ -100,6 +100,7 @@ public sealed class SnipWorkflow
         catch (Exception ex)
         {
             _ocrEngine.Unload();
+            AppDiagnostics.LogException("Snip workflow failed.", ex);
             ShowToast("OCR failed - details opened");
             _resultPresenter.ShowResult(OcrFailureDiagnostics.Format(ex));
         }

@@ -70,6 +70,7 @@ public sealed class OnboardingWindow : Window
             }
             catch (Exception ex)
             {
+                AppDiagnostics.LogException("Onboarding Start snip failed.", ex);
                 Show();
                 Activate();
                 System.Windows.MessageBox.Show(OcrFailureDiagnostics.Format(ex), "OCR Snip failed to start", MessageBoxButton.OK, MessageBoxImage.Error);
