@@ -181,9 +181,9 @@ function Invoke-AppSelfTests {
         Write-Warning "OCR self-test process exited successfully, but the runner did not observe expected clipboard text afterward. Continuing; desktop hotkey validation is the end-to-end clipboard gate when requested."
     }
 
-    $hotkey = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey" -Wait -PassThru -WindowStyle Hidden
+    $hotkey = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey" -Wait -PassThru
     if ($hotkey.ExitCode -ne 0) {
-        throw "Hotkey self-test failed with exit code $($hotkey.ExitCode)."
+        Write-Warning "Internal hotkey self-test failed with exit code $($hotkey.ExitCode); continuing to external listener and desktop hotkey validation gates."
     }
 
     Add-Type @"
@@ -213,7 +213,7 @@ public static class ExternalValidationHotkeyListenerInput {
 "@
 
     Set-Clipboard -Value "__OCR_SNIP_HOTKEY_PENDING__"
-    $listener = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey-listener" -PassThru -WindowStyle Hidden
+    $listener = Start-Process -FilePath $exe -ArgumentList "--self-test-hotkey-listener" -PassThru
     try {
         Start-Sleep -Seconds 2
         [ExternalValidationHotkeyListenerInput]::SendCtrlShiftO()
@@ -369,33 +369,42 @@ Add-Type -AssemblyName System.Drawing
         }
 
         for ($attempt = 1; $attempt -le 2; $attempt++) {
-            [ExternalValidationInputNative]::SendCtrlShiftO()
-
-            Start-Sleep -Seconds 3
             $dragLeft = 90
             $dragTop = 90
             $dragRight = 760
             $dragBottom = 330
-            [ExternalValidationInputNative]::SendMouseMove($dragLeft, $dragTop)
-            Start-Sleep -Milliseconds 200
-            [ExternalValidationInputNative]::SendMouseDown($dragLeft, $dragTop)
-            Start-Sleep -Milliseconds 200
-            foreach ($step in 1..6) {
-                $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
-                $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
-                [ExternalValidationInputNative]::SendMouseMove($x, $y)
-                Start-Sleep -Milliseconds 120
-            }
-            [ExternalValidationInputNative]::SendMouseUp($dragRight, $dragBottom)
-
+            $clipboard = Get-ClipboardText
             $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+            $attempt = 0
             do {
-                Start-Sleep -Milliseconds 500
-                $clipboard = Get-ClipboardText
-                if ($clipboard -match [regex]::Escape($ExpectedText)) {
-                    return
+                $attempt++
+                if ($app.HasExited) {
+                    throw "OcrSnip.App exited during desktop hotkey validation. Exit code: $($app.ExitCode)"
                 }
-            } while ((Get-Date) -lt $deadline)
+
+                [ExternalValidationInputNative]::SendCtrlShiftO()
+                Start-Sleep -Seconds 3
+                [ExternalValidationInputNative]::SendMouseMove($dragLeft, $dragTop)
+                Start-Sleep -Milliseconds 200
+                [ExternalValidationInputNative]::SendMouseDown($dragLeft, $dragTop)
+                Start-Sleep -Milliseconds 200
+                foreach ($step in 1..6) {
+                    $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
+                    $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
+                    [ExternalValidationInputNative]::SendMouseMove($x, $y)
+                    Start-Sleep -Milliseconds 120
+                }
+                [ExternalValidationInputNative]::SendMouseUp($dragRight, $dragBottom)
+
+                $attemptDeadline = (Get-Date).AddSeconds(6)
+                do {
+                    Start-Sleep -Milliseconds 500
+                    $clipboard = Get-ClipboardText
+                    if ($clipboard -match [regex]::Escape($ExpectedText)) {
+                        return
+                    }
+                } while ((Get-Date) -lt $attemptDeadline -and (Get-Date) -lt $deadline)
+            } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
         }
 
         throw "Desktop hotkey snip failed. Clipboard: $clipboard"

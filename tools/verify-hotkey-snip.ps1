@@ -172,34 +172,43 @@ try {
         throw "OcrSnip.App exited before hotkey snip verification. Exit code: $($app.ExitCode)"
     }
 
-    [InputNative]::SendCtrlShiftO()
-
-    Start-Sleep -Seconds 1
     $dragLeft = 90
     $dragTop = 90
     $dragRight = 760
     $dragBottom = 330
-    [InputNative]::SendMouseMove($dragLeft, $dragTop)
-    Start-Sleep -Milliseconds 200
-    [InputNative]::SendMouseDown($dragLeft, $dragTop)
-    Start-Sleep -Milliseconds 200
-    foreach ($step in 1..6) {
-        $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
-        $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
-        [InputNative]::SendMouseMove($x, $y)
-        Start-Sleep -Milliseconds 120
-    }
-    [InputNative]::SendMouseUp($dragRight, $dragBottom)
-
+    $clipboard = Get-ClipboardText
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $attempt = 0
     do {
-        Start-Sleep -Milliseconds 500
-        $clipboard = Get-ClipboardText
-        if ($clipboard -match [regex]::Escape($ExpectedText)) {
-            Write-Host "Hotkey snip verification passed."
-            return
+        $attempt++
+        if ($app.HasExited) {
+            throw "OcrSnip.App exited during hotkey snip verification. Exit code: $($app.ExitCode)"
         }
-    } while ((Get-Date) -lt $deadline)
+
+        [InputNative]::SendCtrlShiftO()
+        Start-Sleep -Seconds 1
+        [InputNative]::SendMouseMove($dragLeft, $dragTop)
+        Start-Sleep -Milliseconds 200
+        [InputNative]::SendMouseDown($dragLeft, $dragTop)
+        Start-Sleep -Milliseconds 200
+        foreach ($step in 1..6) {
+            $x = [int]($dragLeft + (($dragRight - $dragLeft) * $step / 6))
+            $y = [int]($dragTop + (($dragBottom - $dragTop) * $step / 6))
+            [InputNative]::SendMouseMove($x, $y)
+            Start-Sleep -Milliseconds 120
+        }
+        [InputNative]::SendMouseUp($dragRight, $dragBottom)
+
+        $attemptDeadline = (Get-Date).AddSeconds(6)
+        do {
+            Start-Sleep -Milliseconds 500
+            $clipboard = Get-ClipboardText
+            if ($clipboard -match [regex]::Escape($ExpectedText)) {
+                Write-Host "Hotkey snip verification passed."
+                return
+            }
+        } while ((Get-Date) -lt $attemptDeadline -and (Get-Date) -lt $deadline)
+    } while ((Get-Date) -lt $deadline -and $attempt -lt 5)
 
     throw "Hotkey snip verification failed. Clipboard: $clipboard"
 }

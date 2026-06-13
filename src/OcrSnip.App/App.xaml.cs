@@ -99,6 +99,7 @@ file static class SelfTestCommand
         finally
         {
             shutdown();
+            Environment.Exit(Environment.ExitCode);
         }
     }
 
@@ -151,9 +152,25 @@ file static class SelfTestCommand
             return;
         }
 
-        HotkeySelfTestInput.SendCtrlShiftO();
-        var completed = await Task.WhenAny(received.Task, Task.Delay(TimeSpan.FromSeconds(3))).ConfigureAwait(true);
-        Environment.ExitCode = completed == received.Task ? 0 : 8;
+        var focusWindow = CreateHotkeySelfTestFocusWindow();
+        try
+        {
+            focusWindow.Show();
+            focusWindow.Activate();
+            await Task.Delay(TimeSpan.FromMilliseconds(150)).ConfigureAwait(true);
+
+            for (var attempt = 0; attempt < 5 && !received.Task.IsCompleted; attempt++)
+            {
+                HotkeySelfTestInput.SendCtrlShiftO();
+                await Task.WhenAny(received.Task, Task.Delay(TimeSpan.FromMilliseconds(500))).ConfigureAwait(true);
+            }
+
+            Environment.ExitCode = received.Task.IsCompleted ? 0 : 8;
+        }
+        finally
+        {
+            focusWindow.Close();
+        }
     }
 
     private static async Task RunHotkeyListenerTestAsync()
@@ -175,34 +192,54 @@ file static class SelfTestCommand
 
         Environment.ExitCode = ClipboardService.TrySetText("OCR_SNIP_HOTKEY_OK", out _) ? 0 : 12;
     }
+
+    private static Window CreateHotkeySelfTestFocusWindow()
+    {
+        return new Window
+        {
+            Width = 1,
+            Height = 1,
+            Left = SystemParameters.VirtualScreenLeft,
+            Top = SystemParameters.VirtualScreenTop,
+            WindowStyle = WindowStyle.None,
+            ShowInTaskbar = false,
+            Topmost = true,
+            Opacity = 0.01
+        };
+    }
 }
 
 file static class HotkeySelfTestInput
 {
     public static void SendCtrlShiftO()
     {
-        var inputs = new Input[6];
-        inputs[0].Type = 1;
-        inputs[0].Union.Keyboard.VirtualKey = 0x11;
-        inputs[1].Type = 1;
-        inputs[1].Union.Keyboard.VirtualKey = 0x10;
-        inputs[2].Type = 1;
-        inputs[2].Union.Keyboard.VirtualKey = 0x4F;
-        inputs[3].Type = 1;
-        inputs[3].Union.Keyboard.VirtualKey = 0x4F;
-        inputs[3].Union.Keyboard.Flags = 0x0002;
-        inputs[4].Type = 1;
-        inputs[4].Union.Keyboard.VirtualKey = 0x10;
-        inputs[4].Union.Keyboard.Flags = 0x0002;
-        inputs[5].Type = 1;
-        inputs[5].Union.Keyboard.VirtualKey = 0x11;
-        inputs[5].Union.Keyboard.Flags = 0x0002;
+        var inputs = new Input[12];
+        inputs[0] = Key(0x12, keyUp: true);
+        inputs[1] = Key(0x10, keyUp: true);
+        inputs[2] = Key(0x11, keyUp: true);
+        inputs[3] = Key(0x11);
+        inputs[4] = Key(0x10);
+        inputs[5] = Key(0x4F);
+        inputs[6] = Key(0x4F, keyUp: true);
+        inputs[7] = Key(0x10, keyUp: true);
+        inputs[8] = Key(0x11, keyUp: true);
+        inputs[9] = Key(0x12, keyUp: true);
+        inputs[10] = Key(0x10, keyUp: true);
+        inputs[11] = Key(0x11, keyUp: true);
 
         var sent = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
         if (sent != inputs.Length)
         {
             Environment.ExitCode = 9;
         }
+    }
+
+    private static Input Key(ushort virtualKey, bool keyUp = false)
+    {
+        var input = new Input { Type = 1 };
+        input.Union.Keyboard.VirtualKey = virtualKey;
+        input.Union.Keyboard.Flags = keyUp ? 0x0002u : 0;
+        return input;
     }
 
     [DllImport("user32.dll", SetLastError = true)]
