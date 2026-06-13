@@ -199,6 +199,15 @@ function Invoke-AppSelfTests {
         Write-Warning "OCR self-test process exited successfully, but the runner did not observe expected clipboard text afterward. Continuing; desktop hotkey validation is the end-to-end clipboard gate when requested."
     }
 
+    $rendered = Start-Process -FilePath $exe -ArgumentList "--self-test-rendered-selection" -Wait -PassThru
+    if ($rendered.ExitCode -ne 0) {
+        throw "Rendered screen-capture OCR self-test failed with exit code $($rendered.ExitCode)."
+    }
+
+    if (!(Wait-ClipboardContains "OCR TEST")) {
+        throw "Rendered screen-capture OCR self-test exited successfully but clipboard text was not observed."
+    }
+
     if (!$script:HostInputAutomationUnlocked) {
         Write-Warning "Skipping hotkey listener self-test because host input automation is locked. Pass -AllowHostInputAutomation or set OCRSNIP_ALLOW_HOST_INPUT_AUTOMATION=1 inside a disposable VM to enable it."
         return
@@ -830,6 +839,7 @@ $metadata = [ordered]@{
     completedChecks = [ordered]@{
         appSelfTests = $appSelfTestsPassed
         appSelfTestClipboardObserved = $appSelfTestClipboardObserved
+        renderedScreenCaptureOcr = $appSelfTestsPassed
         idleNoNetwork = $idleNoNetworkPassed
         desktopHotkey = $desktopHotkeyPassed
         hotkeyConflict = $hotkeyConflictPassed

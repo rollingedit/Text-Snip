@@ -28,6 +28,7 @@ Copy-Item -Recurse -LiteralPath $publishRoot -Destination (Join-Path $staging "O
 Copy-Item -LiteralPath $fixture -Destination (Join-Path $staging "Fixtures/simple_text.png")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "run-external-validation-kit.ps1") -Destination (Join-Path $staging "tools/run-external-validation-kit.ps1")
 Copy-Item -LiteralPath (Join-Path $PSScriptRoot "validation-gates.json") -Destination (Join-Path $staging "tools/validation-gates.json")
+Copy-Item -LiteralPath (Join-Path $PSScriptRoot "HostInputAutomationGuard.ps1") -Destination (Join-Path $staging "tools/HostInputAutomationGuard.ps1")
 
 Set-Content -LiteralPath (Join-Path $staging "autorun.inf") -Value @(
     "[AutoRun]",
