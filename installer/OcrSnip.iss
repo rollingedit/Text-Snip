@@ -34,7 +34,13 @@ Name: "{group}\OCR Snip"; Filename: "{app}\{#MyAppExeName}"
 Name: "{autodesktop}\OCR Snip"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
 [Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: none; ValueName: "OcrSnip"; Flags: deletevalue
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "OcrSnip"; ValueData: """{app}\{#MyAppExeName}"" --tray"; Tasks: launchatlogin
+
+[InstallDelete]
+Type: filesandordirs; Name: "{app}\*"
+Type: files; Name: "{autodesktop}\OCR Snip.lnk"
+Type: files; Name: "{group}\OCR Snip.lnk"
 
 [Run]
 Filename: "{tmp}\vc_redist.x64.exe"; Parameters: "/install /quiet /norestart"; StatusMsg: "Installing Visual C++ Runtime..."; Check: NeedsVCRedist
@@ -53,4 +59,12 @@ begin
   begin
     Result := Version < 'v14.40';
   end;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  ResultCode: Integer;
+begin
+  Exec('taskkill.exe', '/IM {#MyAppExeName} /F', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  Result := '';
 end;
