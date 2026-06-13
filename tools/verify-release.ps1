@@ -44,6 +44,8 @@ Invoke-Native { & $dotnet test (Join-Path $repoRoot "OcrSnip.slnx") -c $Configur
 Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-det/inference.onnx" | Out-Null }
 Invoke-Native { & (Join-Path $PSScriptRoot "inspect-onnx.ps1") -ModelPath "assets/models/ppocrv6-small-rec/inference.onnx" | Out-Null }
 & (Join-Path $PSScriptRoot "publish.ps1") -Configuration $Configuration
+& (Join-Path $PSScriptRoot "create-external-validation-kit.ps1") | Out-Null
+& (Join-Path $PSScriptRoot "verify-external-validation-kit.ps1") -RunLocalSelfTest | Out-Null
 & (Join-Path $PSScriptRoot "measure-memory.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-signing-status.ps1") | Out-Null
 & (Join-Path $PSScriptRoot "verify-app-selftests.ps1") | Out-Null

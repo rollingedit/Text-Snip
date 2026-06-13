@@ -60,6 +60,7 @@ try {
         "write-validation-status.ps1",
         "export-external-validation.ps1",
         "create-external-validation-kit.ps1",
+        "verify-external-validation-kit.ps1",
         "run-external-validation-kit.ps1",
         "invoke-external-validation-profile.ps1",
         "validate-machine-environment.ps1",
