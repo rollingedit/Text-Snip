@@ -27,11 +27,12 @@ Text Snip now uses OCR geometry to rebuild useful clipboard structure:
 
 ## Verification
 
-Built and tested locally on Windows x64:
+Built and tested on Windows x64 from commit `6ea1269`:
 
-* Release test suite: 103 passing tests.
+* Release test suite: 104 passing tests.
 * Model hash/config checks passed during installer build.
 * Installer build completed successfully.
+* Public Windows CI passed for build, tests, OCR fixture gates, validation tooling, publish, and release artifacts.
 
 Latest local installer produced at:
 
@@ -42,7 +43,7 @@ installer\Output\Text-Snip-Setup-x64.exe
 SHA256:
 
 ```text
-233E50285A39E4B2FAB4254E3DFA84BA819C9741ED5F3E9F6FCD1C9361FE4B87
+BDA1C9F9D73848D6B9D27BFE94DC789F4F8D0C29D9373D772416D2A1A257A440
 ```
 
 ## Notes
