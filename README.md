@@ -29,6 +29,7 @@ Screenshots are captured in memory and not saved by Text Snip.
 * **Real OCR pipeline**: bundled [PP-OCRv6 small detector](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_det_onnx) and [PP-OCRv6 small recognizer](https://huggingface.co/PaddlePaddle/PP-OCRv6_small_rec_onnx) ONNX models through [ONNX Runtime](https://github.com/microsoft/onnxruntime), with [OpenCvSharp](https://github.com/shimat/opencvsharp) / [OpenCV](https://github.com/opencv/opencv) for image preprocessing and [Clipper2](https://github.com/AngusJohnson/Clipper2) for OCR text-box geometry.
 * **Custom layout formatter**: Text Snip rebuilds reading order, rows, columns, wrapped lines, list markers, spacing, punctuation, and section breaks.
 * **Repairable installer**: reinstalling replaces stale app files and shortcuts; optional reset clears Text Snip settings/logs.
+* **No NPU needed**: The only half decent built in OCR requires a Copilot+ PC, this doesn't and performs better.
 
 ## How It Works
 
@@ -46,7 +47,7 @@ The formatter handles:
 * two-column cards, menus, price columns, release notes, tables, and app screens;
 * punctuation spacing cleanup.
 
-This matters because OCR models return text boxes, not polished clipboard text. Text Snip turns those boxes into something you can paste and use.
+OCR models return text boxes, not polished clipboard text. Text Snip turns those boxes into something you can paste and use.
 
 ## Practical Limits
 
