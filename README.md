@@ -1,6 +1,6 @@
 # Text Snip
 
-Native OCR snipping for Windows with a custom layout formatter. Press `Win+Shift+O`, drag over text, release, and Text Snip copies formatted text to your clipboard.
+Native OCR snipping for Windows with a custom layout formatter. Press `Win+Shift+O`, drag over text, and Text Snip copies formatted text to your clipboard.
 
 Windows OCR sucks. Phones made it easy: select text from anything, copy it. Text Snip brings that mobile-native OCR experience to Windows and goes further with local recognition plus a custom formatter that turns OCR boxes into usable clipboard text instead of raw OCR output.
 
